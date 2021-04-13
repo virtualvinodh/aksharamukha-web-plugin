@@ -2502,8 +2502,8 @@ function appendTool() {
       <div class="aksharamukha-logosec">
           <span class="aksharamukha-name"><small>Select script</small>&nbsp;&nbsp;&nbsp;<button id="aksharamukha-pluginhidebutton"><small>Hide</small></button>
       </div>
-      <div id="aksharamukha-minlogo">
-      <small><a href="http://aksharamukha.appspot.com" class="aksharamukha-hyperlink" target="_blank"><img src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha/aksharamukha-web-plugin/icon.png" width="20px"/></a>&nbsp;<sup><button id="aksharamukha-minlogobutton"><small>Show</small></button></sup>
+      <div id="aksharamukha-minlogo" style="text-align: center;">
+      <small><a href="http://aksharamukha.appspot.com" class="aksharamukha-hyperlink" target="_blank"><img src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha/aksharamukha-web-plugin/icon.png" width="20px"/></a>&nbsp;<sup><span id="message" style="display:none;">Displaying in<br/><span id="scriptName">Telugu</span></span></sup><sup><button id="aksharamukha-minlogobutton"><small>Change <br/>script</small></button></sup>
       </div>
 ` + selectInit + selectMid + selectEnd + `
   `);
@@ -2662,6 +2662,7 @@ function appendTool() {
         sel.value = window.localStorage.getItem('target')
     }
     if (window.localStorage.getItem('target')) {
+        console.log('here3333')
         transliterate()
         hidePlugin()
     }
@@ -2825,6 +2826,20 @@ function hidePlugin() {
         document.getElementById('aksharamukha-preservebut').style.display = 'none'
     }
     document.getElementById('aksharamukha-minlogo').style.display = 'block'
+    document.getElementById('message').style.display = 'block'
+
+    var sel = document.getElementById('aksharamukhaselect')
+
+    if(typeof window.localStorage.getItem('target') !== 'undefined' && window.localStorage.getItem('target') !== null) {
+        console.log('here 33 ' + window.localStorage.getItem('target'))
+        document.getElementById('scriptName').innerText = window.localStorage.getItem('target')
+    } else {
+        console.log('here selecting ' + sel.value)
+        document.getElementById('scriptName').innerText = sel.value
+    }
+    if (sel.value === 'Original' || window.localStorage.getItem('target') === 'Original') {
+        document.getElementById('message').style.display = 'none'
+    }
     window.localStorage.setItem('hidePlugin', 'true')
 }
 
