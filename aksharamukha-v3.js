@@ -2039,7 +2039,7 @@ const ScriptMixin = {
         },
         downloadHTML: function(content) {
             var warning = '<span class="printhide"><small>Proper display of the text below may depend on webfonts, which in turn require being connected to the internet</small><br/> </span> <br/>'
-            var doc = '<html><head><meta charset="utf-8"/><link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha/aksharamukha-front/src/statics/fonts.css"></head><body>' + warning + content + '</span></body></html>'
+            var doc = '<html><head><meta charset="utf-8"/><link rel="stylesheet" type="text/css" href="./fonts.css"></head><body>' + warning + content + '</span></body></html>'
             var blob = ''
             const e = document.createEvent('MouseEvents')
             const a = document.createElement('a')
@@ -2415,6 +2415,7 @@ function transliterateReq(source, target, nativize, text, postOptions, preOption
             'text': text,
             'preOptions': preOptions
         });
+        console.log(data)
         xhttp.send(data);
         // Setup our listener to process compeleted requests
         xhttp.onreadystatechange = function() {
@@ -2423,6 +2424,7 @@ function transliterateReq(source, target, nativize, text, postOptions, preOption
             // Process the response
             if (xhttp.status >= 200 && xhttp.status < 300) {
                 // If successful
+                console.log(xhttp.responseText);
                 resolve(xhttp.responseText);
             } else {
                 // If failed
@@ -2631,7 +2633,7 @@ function appendTool() {
     var link = document.createElement("link");
     link.type = "text/css";
     link.rel = "stylesheet";
-    link.href = 'https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha/aksharamukha-front/src/statics/fonts.css'
+    link.href = './fonts.css'
     document.head.appendChild(link)
     document.getElementById('aksharamukhaselect').addEventListener('input', transliterate)
     document.getElementById('aksharamukha-minlogobutton').addEventListener('click', showPlugin)
