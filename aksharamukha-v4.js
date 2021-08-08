@@ -1,6 +1,7 @@
 const ScriptMixin = {
     data() {
         return {
+            vowels: ['a', 'A', 'i', 'I', 'u', 'U', 'R', 'E', 'e', 'ai', 'O', 'o', 'au'],
             consonants: ['k', 'kh', 'g', 'gh', 'G', 'c', 'ch', 'j', 'jh', 'J', 'T', 'Th', 'D', 'Dh', 'N', 't', 'th', 'd', 'dh', 'n', 'p', 'ph', 'b', 'bh', 'm', 'y', 'r', 'l', 'v', 'z', 'S', 's', 'h', 'L', 'Z', 'r2', 'n2'],
             consonantsIndic: ['k', 'kh', 'g', 'gh', 'G', 'c', 'ch', 'j', 'jh', 'J', 'T', 'Th', 'D', 'Dh', 'N', 't', 'th', 'd', 'dh', 'n', 'p', 'ph', 'b', 'bh', 'm', 'y', 'r', 'l', 'v', 'z', 'S', 's', 'h', 'L'],
             ayogavahas: ['aM', 'aH'],
@@ -1917,7 +1918,7 @@ const ScriptMixin = {
                     wikicode: '',
                     font: {
                         'name': 'Agastya Sans',
-                        'url': 'https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha/aksharamukha-front/src/statics/AgastyaExtendedTamil.otf'
+                        'url': 'https://github.com/virtualvinodh/agastya-tamil-extended'
                     },
                     language: ['Sanskrit & Pali', 'Sanskrit', 'Pali'],
                     status: ['Living', 'Living: Minor'],
@@ -2845,8 +2846,8 @@ async function translit(element, ind, source, targetOld, target) {
             }
             textsTran = JSON.parse(textsTran)
         } catch (e) {
-            console.log(e)
-            console.log(textsTranOrig)
+            //console.log(e)
+            //console.log(textsTranOrig)
             // console.log(typeof textsTran)
             textsTran = textsTran
         }
@@ -2880,6 +2881,7 @@ function transliterateReq(source, target, nativize, text, postOptions, preOption
             'text': text,
             'preOptions': preOptions
         });
+        //console.log(data)
         xhttp.send(data);
         // Setup our listener to process compeleted requests
         xhttp.onreadystatechange = function() {
@@ -2888,6 +2890,7 @@ function transliterateReq(source, target, nativize, text, postOptions, preOption
             // Process the response
             if (xhttp.status >= 200 && xhttp.status < 300) {
                 // If successful
+                //console.log(xhttp.responseText);
                 resolve(xhttp.responseText);
             } else {
                 // If failed
@@ -2967,8 +2970,8 @@ function appendTool() {
       <div class="aksharamukha-logosec">
           <span class="aksharamukha-name"><small>Select script</small>&nbsp;&nbsp;&nbsp;<button id="aksharamukha-pluginhidebutton"><small>Hide</small></button>
       </div>
-      <div id="aksharamukha-minlogo">
-      <small><a href="http://aksharamukha.appspot.com" class="aksharamukha-hyperlink" target="_blank"><img src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha/aksharamukha-web-plugin/icon.png" width="20px"/></a>&nbsp;<sup><button id="aksharamukha-minlogobutton"><small>Show</small></button></sup>
+      <div id="aksharamukha-minlogo" style="text-align: center;">
+      <small><a href="http://aksharamukha.appspot.com" class="aksharamukha-hyperlink" target="_blank"><img src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin/icon.png" width="20px"/></a>&nbsp;<sup><span id="message" style="display:none;">Displaying in<br/><span id="scriptName">Telugu</span></span></sup><sup><button id="aksharamukha-minlogobutton"><small>Change <br/>script</small></button></sup>
       </div>
 ` + selectInit + selectMid + selectEnd + `
   `);
@@ -2976,7 +2979,7 @@ function appendTool() {
     newDivLogo.id = "aksharamukha-branding1"
     var navbar = document.getElementById('aksharamukha-navbar')
     navbar.appendChild(newDivLogo)
-    document.getElementById('aksharamukha-branding1').innerHTML = '<a href="http://aksharamukha.appspot.com" class="aksharamukha-hyperlink" target="_blank"><img src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha/aksharamukha-web-plugin/icon.png" width="15px"/> <small><sup>Aksharamukha</sup></small></a>'
+    document.getElementById('aksharamukha-branding1').innerHTML = '<a href="http://aksharamukha.appspot.com" class="aksharamukha-hyperlink" target="_blank"><img src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin/icon.png" width="15px"/> <small><sup>Aksharamukha</sup></small></a>'
     var newStyle = document.createElement('style');
     newStyle.appendChild(document.createTextNode(`
     .logo-aksharamukha {
@@ -3127,6 +3130,7 @@ function appendTool() {
         sel.value = window.localStorage.getItem('target')
     }
     if (window.localStorage.getItem('target')) {
+        //console.log('here3333')
         transliterate()
         hidePlugin()
     }
@@ -3141,8 +3145,8 @@ function appendTool() {
 async function transliterate(event) {
     if (typeof event !== 'undefined' && event.target.id == 'aksharamukha-preserve') {
         preservePrevious = event.target.checked
-        console.log(event.target.checked)
-        console.log(preservePrevious)
+        //console.log(event.target.checked)
+        //console.log(preservePrevious)
         window.localStorage.setItem('preservePrevious', preservePrevious)
     }
     var sel = document.getElementById('aksharamukhaselect')
@@ -3153,7 +3157,7 @@ async function transliterate(event) {
         if (url.indexOf('?') > -1) {
             if (window.location.search.indexOf('akshrmkh') > -1) {
                 var oldPar = window.location.search.split('=')[window.location.search.split('=').length - 1]
-                console.log(window.location.search)
+                //console.log(window.location.search)
                 var newPath = window.location.search.replace('akshrmkh=' + oldPar, 'akshrmkh=' + target)
                 refresh = window.location.protocol + "//" + window.location.host + window.location.pathname + newPath;
             } else {
@@ -3220,7 +3224,7 @@ async function transliterate(event) {
         newDivLogo.id = "aksharamukha-branding"
         var navbar = document.getElementById('aksharamukha-navbar')
         navbar.appendChild(newDivLogo)
-        document.getElementById('aksharamukha-branding').innerHTML = '<a href="http://aksharamukha.appspot.com" class="aksharamukha-hyperlink" target="_blank"><img src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha/aksharamukha-web-plugin/icon.png" width="15px"/> <small><sup>Aksharamukha </sup></small></a>'
+        document.getElementById('aksharamukha-branding').innerHTML = '<a href="http://aksharamukha.appspot.com" class="aksharamukha-hyperlink" target="_blank"><img src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin/icon.png" width="15px"/> <small><sup>Aksharamukha </sup></small></a>'
         document.getElementById('aksharamukhaselect').addEventListener('input', transliterate)
         document.getElementById('aksharamukha-minlogobutton').addEventListener('click', showPlugin)
         document.getElementById('aksharamukha-pluginhidebutton').addEventListener('click', hidePlugin)
@@ -3261,7 +3265,7 @@ async function transliterate(event) {
                 //transContent[i].classList.remove(ScriptMixin.methods.getOutputClass(targetOld, postOptionsListOld))
             }
             //transContent[i].classList.add(ScriptMixin.methods.getOutputClass(target, postOptionsList))
-            document.getElementById('aksharamukha-loading').innerHTML = '<img src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha/aksharamukha-web-plugin/loading.gif" width="70px" />'
+            document.getElementById('aksharamukha-loading').innerHTML = '<img src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin/loading.gif" width="70px" />'
             await translit(transContent[i], i, source, targetOld, target)
             document.getElementById('aksharamukha-loading').innerHTML = ''
             //getResult(transContent[i], i, source, targetOld)
@@ -3290,6 +3294,18 @@ function hidePlugin() {
         document.getElementById('aksharamukha-preservebut').style.display = 'none'
     }
     document.getElementById('aksharamukha-minlogo').style.display = 'block'
+    document.getElementById('message').style.display = 'block'
+    var sel = document.getElementById('aksharamukhaselect')
+    if (typeof window.localStorage.getItem('target') !== 'undefined' && window.localStorage.getItem('target') !== null) {
+        //console.log('here 33 ' + window.localStorage.getItem('target'))
+        document.getElementById('scriptName').innerText = window.localStorage.getItem('target')
+    } else {
+        //console.log('here selecting ' + sel.value)
+        document.getElementById('scriptName').innerText = sel.value
+    }
+    if (sel.value === 'Original' || window.localStorage.getItem('target') === 'Original') {
+        document.getElementById('message').style.display = 'none'
+    }
     window.localStorage.setItem('hidePlugin', 'true')
 }
 

@@ -1,6 +1,7 @@
 ﻿const ScriptMixin = {
   data () {
     return {
+      vowels: ['a', 'A', 'i', 'I', 'u', 'U', 'R', 'E', 'e', 'ai', 'O', 'o', 'au'],
       consonants: ['k', 'kh', 'g', 'gh', 'G',
         'c', 'ch', 'j', 'jh', 'J',
         'T', 'Th', 'D', 'Dh', 'N',
@@ -1720,7 +1721,7 @@
           wikicode: '',
           font: {
             'name': 'Agastya Sans',
-            'url': 'https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha/aksharamukha-front/src/statics/AgastyaExtendedTamil.otf'
+            'url': 'https://github.com/virtualvinodh/agastya-tamil-extended'
           },
           language: ['Sanskrit & Pali', 'Sanskrit', 'Pali'],
           status: ['Living', 'Living: Minor'],
