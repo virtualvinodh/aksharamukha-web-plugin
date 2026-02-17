@@ -283,7 +283,7 @@
           }
 
           #fab:hover { transform: scale(1.1); }
-          #fab img { width: 28px; height: 28px; filter: brightness(0) invert(1); }
+          #fab img { width: 32px; height: 32px; object-fit: contain; }
 
           #menu {
             position: fixed;
