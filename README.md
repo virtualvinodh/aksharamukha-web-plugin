@@ -36,6 +36,7 @@ You can customize the plugin via URL parameters or an `aksharamukha-settings.jso
 - `prelist`: Predefined list of scripts (`majorindic`, `majorall`, `sanskall`, `sansktradall`).
 - `btncolor`: HEX color for the FAB (e.g., `#ff0000`).
 - `exclude`: CSS selector for elements to exclude (default: `code, pre, .no-translit`).
+- `whitelist`: CSS selector for elements to force transliteration, even inside excluded areas (default: `.yes-translit`).
 - `server`: Set to `true` to force use of the Server API instead of the local engine.
 - `changeurl`: Set to `true` to append the selected script to the URL.
 

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aksharamukha v5 Demo</title>
+    <!-- Aksharamukha v5 Script -->
+    <script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin/aksharamukha-v5.js?changeurl=1&hoverTooltip=true&btncolor=%2327ae60&exclude=.custom-no-translit"></script>
+    <!-- Local Fallback for testing before CDN push -->
+    <script>
+        if (typeof AksharamukhaV5 === 'undefined') {
+            document.write('<script src="aksharamukha-v5.js?changeurl=1&hoverTooltip=true&btncolor=%2327ae60&exclude=.custom-no-translit"><\/script>');
+        }
+    </script>
+    <style>
+        body { font-family: sans-serif; max-width: 800px; margin: 40px auto; line-height: 1.6; padding: 0 20px; }
+        .section { margin-bottom: 30px; padding: 15px; border: 1px solid #eee; border-radius: 8px; }
+        .section-title { font-weight: bold; margin-bottom: 10px; border-bottom: 2px solid #27ae60; display: inline-block; }
+        code { background: #f4f4f4; padding: 2px 5px; }
+        .no-translit { color: red; }
+        .yes-translit { color: green; font-weight: bold; }
+        .custom-no-translit { background: #ffebee; }
+        .dynamic-container { border: 1px dashed #ccc; padding: 10px; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Aksharamukha v5 Comprehensive Demo</h1>
+
+    <div class="section">
+        <div class="section-title">1. Standard Transliteration (aksharamukha-text)</div>
+        <p class="aksharamukha-text">ये धर्मा हेतुप्रभवा हेतुं तेषां तथागतो ह्यवदत् ।</p>
+        <p class="aksharamukha-text">तेषां च यो निरोध एवंवादी महाश्रमणः ॥</p>
+    </div>
+
+    <div class="section">
+        <div class="section-title">2. Input Script & Pre-options Overrides</div>
+        <p class="aksharamukha-text inputscript-Malayalam">ആലയഃ പുണ്യനിധാനാനാമ് (Input: Malayalam)</p>
+        <p class="aksharamukha-text inputscript-Tamil preoptions-TamilTranscribe">துணைச்செய்தி: பிராமியின் பெயர் (Input: Tamil, Pre-option: Transcribe)</p>
+        <p class="aksharamukha-text inputscript-HK">namaste (Input: HK)</p>
+    </div>
+
+    <div class="section">
+        <div class="section-title">3. Exclusions & Whitelist</div>
+        <div class="aksharamukha-text">
+            This is transliterable: बुद्ध ।
+            <code>This is a <code> block, should be excluded: बुद्ध</code>
+            <pre>This is a <pre> block, should be excluded: बुद्ध</pre>
+            <div class="no-translit">This has .no-translit class: बुद्ध</div>
+            <div class="custom-no-translit">This has .custom-no-translit (passed via URL): बुद्ध</div>
+
+            <div class="no-translit">
+                Excluded parent...
+                <span class="yes-translit">BUT this is .yes-translit whitelist: बुद्ध</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">4. Dynamic Content (MutationObserver)</div>
+        <button onclick="addContent()">Add Transliterable Content</button>
+        <div id="dynamic-area" class="dynamic-container"></div>
+        <script>
+            function addContent() {
+                const p = document.createElement('p');
+                p.className = 'aksharamukha-text';
+                p.textContent = 'Dynamically added: नमो बुद्धाय (Namo Buddhaya)';
+                document.getElementById('dynamic-area').appendChild(p);
+            }
+        </script>
+    </div>
+
+    <div class="section">
+        <div class="section-title">5. Global Body Wrapping (if no classes found)</div>
+        <p>This paragraph does NOT have the class. If you change the script URL to use a non-existent class or if we remove all classes, the whole body might get wrapped (depending on config).</p>
+        <p>Current config uses <code>class=aksharamukha-text</code>.</p>
+    </div>
+
+    <div style="margin-top: 50px; font-size: 0.8rem; color: #666;">
+        Check the FAB in the bottom right corner to change scripts.
+        "Original on Hover" is enabled by default via URL parameter <code>hoverTooltip=true</code>.
+    </div>
+</body>
+</html>

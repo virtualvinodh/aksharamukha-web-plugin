@@ -10,17 +10,21 @@
     class: 'aksharamukha-text',
     btncolor: '#007bff',
     exclude: 'code, pre, .no-translit',
+    whitelist: '.yes-translit',
     server: false,
     changeurl: false,
     scriptlist: [],
     prelist: '',
     preoptions: [],
-    hoverTooltip: false
+    hoverTooltip: false,
+    autocollapse: 5000
   };
 
   function getScriptParams() {
-    const scripts = document.getElementsByTagName('script');
-    const currentScript = scripts[scripts.length - 1];
+    const currentScript = document.currentScript || (() => {
+      const scripts = document.getElementsByTagName('script');
+      return scripts[scripts.length - 1];
+    })();
     const src = currentScript.src;
     const params = {};
     if (src.includes('?')) {
@@ -65,6 +69,12 @@
   config.server = String(config.server) === 'true';
   config.changeurl = String(config.changeurl) === '1' || String(config.changeurl) === 'true';
   config.hoverTooltip = String(config.hoverTooltip) === 'true';
+  config.autocollapse = parseInt(config.autocollapse);
+
+  // Sanitize btncolor (only allow hex or simple color names to prevent XSS)
+  if (config.btncolor && !/^#([A-Fa-f0-9]{3,6})$|^[a-z]+$/.test(config.btncolor)) {
+    config.btncolor = DEFAULT_CONFIG.btncolor;
+  }
 
   if (typeof config.scriptlist === 'string' && config.scriptlist) {
     config.scriptlist = config.scriptlist.split(',');
@@ -93,11 +103,20 @@
       const response = await fetch(url);
       if (!response.ok) throw new Error('Network response was not ok');
       let text = await response.text();
-      // Use a more robust way to extract the object
-      const match = text.match(/(?:const\s+ScriptMixin\s*=|export\s+default)\s*(\{[\s\S]*\})/);
+      // Robust extraction of the object literal
+      let content = text;
+      // Handle "export default { ... }"
+      let match = content.match(/export\s+default\s*(\{[\s\S]*\})/);
+      if (!match) {
+        // Handle "const ScriptMixin = { ... }"
+        match = content.match(/const\s+ScriptMixin\s*=\s*(\{[\s\S]*\})/);
+      }
       if (match) {
+        // Remove trailing semicolon if present
+        let objStr = match[1].trim();
+        if (objStr.endsWith(';')) objStr = objStr.slice(0, -1);
         console.log('Aksharamukha v5: ScriptMixin parsed successfully');
-        return new Function('return ' + match[1])();
+        return new Function('return ' + objStr)();
       }
       console.warn('Aksharamukha v5: ScriptMixin regex match failed');
     } catch (e) {
@@ -530,11 +549,12 @@
       options: JSON.parse(localStorage.getItem('aksharamukha-options-' + (localStorage.getItem('aksharamukha-target') || 'Original')) || '[]'),
       expanded: true,
       loading: false,
-      hoverTooltip: localStorage.getItem('aksharamukha-hover') === 'true'
+      hoverTooltip: localStorage.getItem('aksharamukha-hover') ? localStorage.getItem('aksharamukha-hover') === 'true' : config.hoverTooltip
     },
 
     isExcluded(el) {
       if (!el || !el.matches) return false;
+      if (this.config.whitelist && el.matches(this.config.whitelist)) return false;
       if (el.matches(this.config.exclude)) return true;
       return this.isExcluded(el.parentElement);
     },
@@ -545,23 +565,29 @@
 
       const target = this.state.target;
       const options = this.state.options;
+      const previousTarget = this._prevTarget || 'Original';
+      const previousOptions = this._prevOptions || [];
 
-      // Handle wrapping body if no target classes found
+      // Framework-ready: avoid wrapping body. Use body directly if no classes found.
       let elements = document.querySelectorAll('.' + this.config.class);
       if (elements.length === 0 && target !== 'Original') {
-        const wrapper = document.createElement('span');
-        wrapper.className = this.config.class;
-        while (document.body.firstChild) wrapper.appendChild(document.body.firstChild);
-        document.body.appendChild(wrapper);
-        elements = [wrapper];
+        elements = [document.body];
       }
 
       for (const el of elements) {
         if (this.isExcluded(el)) continue;
+
+        // Remove previous output class
+        const prevOutClass = this.mixinMethods.getOutputClass(previousTarget, previousOptions);
+        if (prevOutClass) el.classList.remove(prevOutClass);
+
         await this.processElement(el, target, options);
       }
 
       if (this.config.changeurl) this.updateUrl(target);
+
+      this._prevTarget = target;
+      this._prevOptions = [...options];
       this.ui.setLoading(false);
     },
 
@@ -569,19 +595,20 @@
       let elSource = this.config.source;
       let elPreOptions = this.config.preoptions;
 
-      element.classList.forEach(cls => {
-        if (cls.startsWith('inputscript-')) elSource = cls.replace('inputscript-', '');
-        if (cls.startsWith('preoptions-')) elPreOptions = cls.replace('preoptions-', '').split(',');
-      });
+      if (element.classList) {
+        element.classList.forEach(cls => {
+          if (cls.startsWith('inputscript-')) elSource = cls.replace('inputscript-', '');
+          if (cls.startsWith('preoptions-')) elPreOptions = cls.replace('preoptions-', '').split(',');
+        });
+      }
 
       if (element._aksh_wrapped) {
-        element.innerHTML = element._aksh_inner_original;
+        this.unwrapElement(element);
         element._aksh_nodes = null;
         element._aksh_wrapped = false;
       }
 
       if (!element._aksh_nodes) {
-        element._aksh_inner_original = element.innerHTML;
         element._aksh_nodes = [];
         const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, {
           acceptNode: (node) => {
@@ -608,7 +635,7 @@
       if (Array.isArray(transliterated)) {
         element._aksh_nodes.forEach((item, i) => {
           if (this.state.hoverTooltip) {
-            this.wrapHover(item.node, item.original, transliterated[i]);
+            this.wrapHover(item, item.original, transliterated[i]);
             element._aksh_wrapped = true;
           } else {
             item.node.nodeValue = transliterated[i];
@@ -617,7 +644,7 @@
       }
 
       const outClass = this.mixinMethods.getOutputClass(target, options);
-      if (outClass) element.classList.add(outClass);
+      if (outClass && element.classList) element.classList.add(outClass);
     },
 
     updateUrl(target) {
@@ -663,26 +690,40 @@
       });
     },
 
-    wrapHover(node, original, transliterated) {
+    unwrapElement(element) {
+      if (!element._aksh_nodes) return;
+      element._aksh_nodes.forEach(item => {
+        if (item.wrapper) {
+          const parent = item.wrapper.parentNode;
+          if (parent) {
+            parent.replaceChild(item.node, item.wrapper);
+          }
+          item.wrapper = null;
+        }
+      });
+    },
+
+    wrapHover(item, original, transliterated) {
       if (!this.state.hoverTooltip) {
-        node.nodeValue = transliterated;
+        item.node.nodeValue = transliterated;
         return;
       }
       const wordsOrig = original.split(/(\s+)/);
       const wordsTrans = transliterated.split(/(\s+)/);
-      const fragment = document.createDocumentFragment();
+      const wrapper = document.createElement('span');
       wordsTrans.forEach((w, i) => {
         if (w.trim() && wordsOrig[i]) {
           const span = document.createElement('span');
           span.textContent = w;
           span.title = wordsOrig[i];
           span.style.borderBottom = '1px dotted rgba(127,127,127,0.5)';
-          fragment.appendChild(span);
+          wrapper.appendChild(span);
         } else {
-          fragment.appendChild(document.createTextNode(w));
+          wrapper.appendChild(document.createTextNode(w));
         }
       });
-      node.parentNode.replaceChild(fragment, node);
+      item.wrapper = wrapper;
+      item.node.parentNode.replaceChild(wrapper, item.node);
     }
   };
 
