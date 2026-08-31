@@ -2,8 +2,9 @@
  * Built by build-scripts/build-web-plugin-v5.js from:
  *   src/script-data.generated.js
  *   src/v5-plugin.js
- * Edit those sources (and re-run build-web-plugin-data.js first if
- * ScriptMixin.js changed), then re-run this script.
+ * Edit those sources (src/script-data.generated.js is itself
+ * regenerated from ScriptMixin.js automatically), then re-run this
+ * script.
  */
 (function () {
 "use strict";

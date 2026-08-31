@@ -7,24 +7,55 @@
  *   1. src/script-data.generated.js
  *      (produced by the aksharamukha monorepo's build-web-plugin-data.js
  *      from its aksharamukha-front/src/mixins/ScriptMixin.js - the only
- *      copy of that source; re-run that script over there, pointed at
- *      this repo, if this file is stale - see README.md)
+ *      copy of that source. This script runs that one itself first - see
+ *      regenerateScriptData() below - so one command does the whole
+ *      pipeline; you don't need to run build-web-plugin-data.js by hand
+ *      unless you want to regenerate it without also rebuilding v5.)
  *   2. src/v5-plugin.js
  *      (the actual plugin logic - hand-edited, lives in this repo)
  *
- * Usage: node build-scripts/build-web-plugin-v5.js
+ * Usage: node build-scripts/build-web-plugin-v5.js [monorepo-path]
+ *   monorepo-path defaults to ../aksharamukha (a sibling of this repo's
+ *   own checkout) - pass a path if yours lives elsewhere.
  */
 const fs = require('fs')
 const path = require('path')
+const { spawnSync } = require('child_process')
 
 const PLUGIN_DIR = path.join(__dirname, '..')
 const DATA_FILE = path.join(PLUGIN_DIR, 'src', 'script-data.generated.js')
 const PLUGIN_FILE = path.join(PLUGIN_DIR, 'src', 'v5-plugin.js')
 const OUT_FILE = path.join(PLUGIN_DIR, 'aksharamukha-v5.js')
 
+// Runs the monorepo's own data-extraction script, pointed back at this
+// repo, so a single `node build-web-plugin-v5.js` regenerates
+// script-data.generated.js from the live ScriptMixin.js and then bundles
+// it - instead of needing that run by hand in the other repo first.
+// Degrades gracefully (warns, keeps whatever's already on disk) if the
+// monorepo isn't checked out where expected, since this repo's own
+// history (src/script-data.generated.js is a real tracked file, not
+// gitignored) is meant to still be buildable on its own.
+function regenerateScriptData (monorepoPath) {
+  const dataScript = path.join(monorepoPath, 'build-scripts', 'build-web-plugin-data.js')
+  if (!fs.existsSync(dataScript)) {
+    console.warn('Skipping script-data regeneration: ' + dataScript + ' not found ' +
+      '(expected the aksharamukha monorepo checked out as a sibling of this repo, or pass its path as an argument). ' +
+      'Using the existing src/script-data.generated.js as-is.')
+    return
+  }
+  console.log('Regenerating script-data.generated.js from ' + dataScript + ' ...')
+  const result = spawnSync(process.execPath, [dataScript, PLUGIN_DIR], { stdio: 'inherit' })
+  if (result.status !== 0) {
+    throw new Error('build-web-plugin-data.js failed (exit ' + result.status + ') - see output above.')
+  }
+}
+
 function main () {
+  const monorepoPath = process.argv[2] || path.join(PLUGIN_DIR, '..', 'aksharamukha')
+  regenerateScriptData(monorepoPath)
+
   if (!fs.existsSync(DATA_FILE)) {
-    throw new Error('Missing ' + DATA_FILE + ' - run build-web-plugin-data.js first.')
+    throw new Error('Missing ' + DATA_FILE + ' and no monorepo found to generate it - see the usage note above.')
   }
 
   const dataSrc = fs.readFileSync(DATA_FILE, 'utf8')
@@ -37,8 +68,9 @@ function main () {
     ' * Built by build-scripts/build-web-plugin-v5.js from:\n' +
     ' *   src/script-data.generated.js\n' +
     ' *   src/v5-plugin.js\n' +
-    ' * Edit those sources (and re-run build-web-plugin-data.js first if\n' +
-    ' * ScriptMixin.js changed), then re-run this script.\n' +
+    ' * Edit those sources (src/script-data.generated.js is itself\n' +
+    ' * regenerated from ScriptMixin.js automatically), then re-run this\n' +
+    ' * script.\n' +
     ' */\n'
 
   const out = banner + '(function () {\n"use strict";\n' + dataSrc + '\n' + pluginSrc + '\n})();\n'

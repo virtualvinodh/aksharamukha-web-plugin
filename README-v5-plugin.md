@@ -106,24 +106,34 @@ Projects/
    └─ aksharamukha-wasm/
 ```
 
-To rebuild after a change:
+To rebuild after any change (`ScriptMixin.js` in the monorepo, or
+`src/v5-plugin.js` here), run one command **in this repo**:
 
-1. **If `ScriptMixin.js` changed** (new script, new pre/post-option, etc.):
-   in the **monorepo**, run `node build-scripts/build-web-plugin-data.js`.
-   With the sibling layout above, it finds this repo automatically and
-   writes `src/script-data.generated.js` here; pass a path as an argument
-   if your checkout of this repo lives somewhere else. This step doesn't
-   apply to plugin-only changes (UI, engine logic) - skip straight to 2.
-2. **Always**, after step 1 or after editing `src/v5-plugin.js` directly:
-   in **this repo**, run `node build-scripts/build-web-plugin-v5.js`. It
-   concatenates `src/script-data.generated.js` + `src/v5-plugin.js` into
-   `aksharamukha-v5.js`.
-3. **Only after a Pyodide/wheel version bump** (rare): in **this repo**,
-   run `pwsh build-scripts/copy-wasm-assets.ps1` to copy the Pyodide
-   runtime + `aksharamukha` wheel from a sibling `aksharamukha-python`
-   checkout into `wasm/` (gitignored here - it's a ~20MB binary payload;
-   host it on your CDN alongside the script for production rather than
-   committing it, or point embeds at it via `?wasmbase=`).
+```
+node build-scripts/build-web-plugin-v5.js
+```
 
-There's no build script in this repo that touches `ScriptMixin.js` or the
-monorepo at all - that direction only ever runs from the monorepo side.
+With the sibling layout above, it finds the monorepo automatically,
+runs its `build-web-plugin-data.js` for you to refresh
+`src/script-data.generated.js` from the live `ScriptMixin.js`, then
+concatenates that with `src/v5-plugin.js` into `aksharamukha-v5.js`. If
+your checkout of the monorepo lives somewhere else, pass its path as an
+argument: `node build-scripts/build-web-plugin-v5.js ../path/to/aksharamukha`.
+
+If the monorepo isn't found at all (e.g. building from just this repo,
+without it checked out), the script warns and falls back to whatever
+`src/script-data.generated.js` is already on disk (it's a real tracked
+file here, not generated-and-gitignored) rather than failing outright -
+so this still works standalone, just without picking up any
+`ScriptMixin.js` changes since the last time someone with the monorepo
+ran it.
+
+**Only after a Pyodide/wheel version bump** (rare, separate from the
+above): run `pwsh build-scripts/copy-wasm-assets.ps1` to copy the
+Pyodide runtime + `aksharamukha` wheel from a sibling `aksharamukha-python`
+checkout into `wasm/` (gitignored here - it's a ~20MB binary payload;
+host it on your CDN alongside the script for production rather than
+committing it, or point embeds at it via `?wasmbase=`).
+
+There's no build script in this repo that *writes to* `ScriptMixin.js`
+or anything else in the monorepo - it only ever reads from it.
