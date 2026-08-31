@@ -146,17 +146,22 @@ or anything else in the monorepo - it only ever reads from it.
 
 ## Serving pre-compressed assets
 
-`copy-wasm-assets.ps1` generates a `.br` (Brotli) sibling next to every
-file under `wasm/`, using .NET's built-in Brotli codec at maximum
-quality - measured effect on the real files:
+Both build scripts generate a `.br` (Brotli) sibling at maximum quality:
+`copy-wasm-assets.ps1` for every file under `wasm/` (.NET's built-in
+Brotli codec), and `build-web-plugin-v5.js` for `aksharamukha-v5.js`
+itself (Node's built-in `zlib` Brotli codec) - the bundle is plain JS
+text and compresses just as well as the other JS glue files below. Pass
+`-SkipCompression`/`--skip-compression` to either script to skip it.
+Measured effect on the real files:
 
 | File | Original | `.br` | Reduction |
 |---|---|---|---|
+| `aksharamukha-v5.js` | 233 KB | 46 KB | 80% |
 | `pyodide.asm.wasm` | 10.09 MB | 2.26 MB | 78% |
 | `pyodide.asm.js` | 1.23 MB | 193 KB | 84% |
 | `pyodide.js` | 16.5 KB | 5.8 KB | 65% |
 | `python_stdlib.zip` + all `.whl` files | ~7.6 MB combined | ~7.5 MB combined | 2-10% |
-| **Total** | **~19 MB** | **~8 MB** | **~58%** |
+| **`wasm/` total** | **~19 MB** | **~8 MB** | **~58%** |
 
 The raw `.wasm`/`.js` compress dramatically; the `.zip`/`.whl` files barely
 shrink, since they're already-compressed archives and Brotli has little

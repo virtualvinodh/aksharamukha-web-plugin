@@ -14,12 +14,21 @@
  *   2. src/v5-plugin.js
  *      (the actual plugin logic - hand-edited, lives in this repo)
  *
- * Usage: node build-scripts/build-web-plugin-v5.js [monorepo-path]
+ * Also writes aksharamukha-v5.js.br, a Brotli-compressed sibling - the
+ * bundle is plain JS text and compresses extremely well (measured ~80%
+ * smaller). Same as wasm/'s .br siblings (see copy-wasm-assets.ps1), this
+ * does nothing by itself: your host/CDN has to actually serve it in place
+ * of the original with a Content-Encoding: br header - see
+ * README-v5-plugin.md's "Serving pre-compressed assets" section. Pass
+ * --skip-compression to skip generating it.
+ *
+ * Usage: node build-scripts/build-web-plugin-v5.js [monorepo-path] [--skip-compression]
  *   monorepo-path defaults to ../aksharamukha (a sibling of this repo's
  *   own checkout) - pass a path if yours lives elsewhere.
  */
 const fs = require('fs')
 const path = require('path')
+const zlib = require('zlib')
 const { spawnSync } = require('child_process')
 
 const PLUGIN_DIR = path.join(__dirname, '..')
@@ -51,7 +60,9 @@ function regenerateScriptData (monorepoPath) {
 }
 
 function main () {
-  const monorepoPath = process.argv[2] || path.join(PLUGIN_DIR, '..', 'aksharamukha')
+  const args = process.argv.slice(2)
+  const skipCompression = args.includes('--skip-compression')
+  const monorepoPath = args.find(a => !a.startsWith('--')) || path.join(PLUGIN_DIR, '..', 'aksharamukha')
   regenerateScriptData(monorepoPath)
 
   if (!fs.existsSync(DATA_FILE)) {
@@ -77,6 +88,16 @@ function main () {
 
   fs.writeFileSync(OUT_FILE, out, 'utf8')
   console.log('Wrote ' + path.relative(process.cwd(), OUT_FILE) + ' (' + (out.length / 1024).toFixed(1) + ' KB)')
+
+  if (!skipCompression) {
+    const compressed = zlib.brotliCompressSync(Buffer.from(out, 'utf8'), {
+      params: { [zlib.constants.BROTLI_PARAM_QUALITY]: zlib.constants.BROTLI_MAX_QUALITY }
+    })
+    const brFile = OUT_FILE + '.br'
+    fs.writeFileSync(brFile, compressed)
+    const pct = 100 - (100 * compressed.length / out.length)
+    console.log('Wrote ' + path.relative(process.cwd(), brFile) + ' (' + (compressed.length / 1024).toFixed(1) + ' KB, ' + pct.toFixed(0) + '% smaller)')
+  }
 }
 
 main()
