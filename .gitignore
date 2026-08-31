@@ -1,1 +1,4 @@
-wasm/
+# wasm/ is deliberately tracked, not ignored - see README-v5-plugin.md's
+# "Releasing a new version" section for why (jsDelivr needs it in the git
+# tree to serve it from a pinned tag/commit alongside aksharamukha-v5.js).
+# Don't re-add it here.

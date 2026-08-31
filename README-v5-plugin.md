@@ -6,8 +6,11 @@ launcher appears letting visitors pick a target script.
 
 ```html
 <div class="aksharamukha-text">आपका पाठ यहाँ जाएगा</div>
-<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin/aksharamukha-v5.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@v5.0.0/aksharamukha-v5.js"></script>
 ```
+
+That `@v5.0.0` matters - see "Releasing a new version" below for why real
+embeds should always pin a tag like this instead of tracking `master`.
 
 `aksharamukha-v5.js` is the current version. `aksharamukha-v2.js`/`v3.js`/`v4.js`
 are kept only so existing sites that already load them don't break - do not
@@ -190,3 +193,62 @@ page instead of the ~19MB uncompressed cold start.
 confirmed it still works if applied, but only shrinks the file by ~3%,
 since Pyodide's official build is already well-optimized. Not worth the
 added Binaryen build dependency for that little.)
+
+## Releasing a new version
+
+**⚠️ Read this before pushing to `master` and telling anyone to embed a new
+version.**
+
+`wasm/` (the ~19MB Pyodide runtime + wheels, plus their `.br` siblings) is
+committed to this repo, not gitignored - that's deliberate: it's what
+makes `<script src=".../aksharamukha-v5.js">` a genuine **one-line, drop-in**
+embed with the WASM engine working out of the box, the same experience
+this project has always promised for `v2`/`v3`/`v4`. jsDelivr's `gh/` CDN
+serves a repo's file tree at a given ref - it can't reach into a GitHub
+Release's attached assets - so there's no way to keep `wasm/` out of the
+git tree and still get that one-link experience through jsDelivr.
+
+That means **every commit here changes what a `master`-tracking jsDelivr
+link serves**, `wasm/` included. jsDelivr also gives unpinned/branch paths
+a much shorter cache lifetime than a pinned tag or commit (which it treats
+as immutable and caches long-term, since the content there can never
+change) - so an embed that tracks `master` can end up re-downloading the
+full payload far more often than one pinned to a tag, on top of serving
+whatever's newest (possibly untested) at any given moment. Both defeat
+the point of the caching work in this repo (Cache Storage, `.br`
+pre-compression). **Real embeds - anything you'd actually tell someone to
+paste into their site - must pin a tag, not track `master`:**
+
+```html
+<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@v5.0.0/aksharamukha-v5.js"></script>
+```
+
+jsDelivr treats a tag-pinned path as immutable and caches it long-term,
+exactly like a pinned npm/CDN package version. `@master` (or no `@` at
+all, which jsDelivr treats the same way) is fine for **your own** testing
+of the latest commit, never for a snippet you hand to someone else.
+
+**Checklist for every release** (i.e. whenever you want the public embed
+snippet to move forward):
+
+1. Land whatever changes you're releasing on `master` as normal.
+2. If `ScriptMixin.js` changed, or you just want a fresh build: run
+   `node build-scripts/build-web-plugin-v5.js` and commit the resulting
+   `aksharamukha-v5.js` (and `src/script-data.generated.js` if it changed).
+3. If Pyodide or a wheel version changed: run
+   `pwsh build-scripts/copy-wasm-assets.ps1`, review the size/diff of
+   `wasm/` (this is the one step that can meaningfully bloat repo
+   history - it's a full binary replacement, not a diffable text change),
+   and commit it.
+4. Tag the commit: `git tag -a v5.1.0 -m "..."` (bump the version
+   sensibly; these don't have to map 1:1 to semver, just be unique and
+   ordered) and `git push origin v5.1.0` (and `git push` the commits too).
+5. Update embed snippets that should move to the new version - in this
+   README, the root README, and anywhere else you've told people to
+   paste a snippet from - to the new `@vX.Y.Z` tag.
+6. Leave old tags (`@v5.0.0`, etc.) in place, forever - anyone who pinned
+   one is relying on it never changing, same principle as `v2.js`/`v3.js`
+   staying frozen.
+
+If you ever forget this list: it's `git log -- README-v5-plugin.md` away,
+right here in this repo, not in any conversation history.

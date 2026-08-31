@@ -1,0 +1,6 @@
+# wasm/ holds binary payloads and pre-generated .br compressions that must
+# be byte-for-byte identical to what was actually compressed/tested - git's
+# CRLF normalization (which would otherwise touch pyodide.asm.js/pyodide.js,
+# both plain text by extension) must never run on anything in here, or a
+# Windows checkout silently desyncs those files from their .br siblings.
+wasm/** -text
