@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Aksharamukha Web Plugin v5 — Demo (client-side WASM engine)</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    max-width: 700px;
+    margin: 40px auto;
+    padding: 0 20px;
+    line-height: 1.7;
+    color: #222;
+  }
+  h1 { font-size: 22px; }
+  .aksharamukha-text { font-size: 18px; padding: 12px 0; }
+  code { background: #f4f4f4; padding: 2px 6px; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<h1>Aksharamukha Web Plugin — v5 Demo</h1>
+<p>This page loads <code>aksharamukha-v5.js</code> with the default <code>engine=auto</code>, which runs the actual
+transliteration engine client-side via WASM (Pyodide) — no network call per conversion, only a one-time
+~15-20s engine download on first use. Must be served over HTTP (not <code>file://</code>).</p>
+<p>For pages with light, occasional use (or slow connections), embed with <code>?engine=api</code> instead
+to skip the WASM download entirely and always call the hosted API — see <a href="demo-v5-api.html">the
+lightweight demo</a>. See the <a href="../README.md#web-plugin">README</a> for the full explanation.</p>
+
+<p class="aksharamukha-text">
+  नमस्ते, अक्षरमुखा एक लिपि परिवर्तन उपकरण है। कृष्ण राम शिव गणेश लक्ष्मी सरस्वती नन्द। धर्म अर्थ काम मोक्ष
+</p>
+
+<p class="aksharamukha-text">
+  दूसरा अनुच्छेद भी एक साथ बदलना चाहिए।
+</p>
+
+<script src="aksharamukha-v5.js"></script>
+</body>
+</html>

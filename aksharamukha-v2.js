@@ -10,33 +10,6 @@ const ScriptMixin = {
             consontantsSpecial: ['L', 'Z', 'r2', 'n2'],
             consonantsSinhala: ['n*g', 'n*j', 'n*D', 'n*d', 'm*b'],
             ayogavahasAll: ['~', 'M', 'H'],
-            vedicScripts: ['Assamese', 'Bengali', 'Devanagari', 'Gujarati', 'Kannada', 'Malayalam', 'Oriya', 'Gurmukhi', 'Tamil', 'Telugu', 'TamilExtended', 'Grantha'],
-            preserveSourceExampleOut: {
-                'WarangCiti': 'akṣaramukha → <span class="warangciti">𑣁𑣌‍𑣝𑣜𑣖𑣃𑣌‍𑣙</span> not <span class="warangciti">𑣁𑣌𑣞𑣜𑣖𑣃𑣌</span>',
-                'Modi': 'ki kī ku kū → <span class="modi">𑘎𑘱 𑘎𑘲 𑘎𑘳 𑘎𑘴</span> not <span class="modi">𑘎𑘱 𑘎𑘲 𑘎𑘳 𑘎𑘴</span>',
-                'Multani': 'aśoka →<span class="multani">𑊀𑊥𑊂𑊄</span> not <span class="multani">𑊀𑊥𑊄</span>',
-                'Ahom': 'ahoṃ →<span class="ahom">𑜒𑜑𑜦𑜪𑜡</span> not <span class="ahom">𑜒𑜑𑜪𑜨</span>',
-                'Sundanese': 'ṛ ḷ bha → <ahoṃ class="sundanese">ᮻ ᮼ ᮽ</span> not <span class="sundanese">ᮛᮩ ᮜᮩ ᮘ</span>',
-                'Avestan': 'khyat  → <span class="avestan">𐬑𐬌𐬌𐬀𐬙</span> not <span class="avestan">𐬒𐬌𐬌𐬀𐬝</span>',
-                'Thaana': 'maṇi → <span class="thaana">މަޱި</span> not <span class="thaana">މަނި</span>',
-                'Tibetan': 'bhagavat → <span class="tibetan">བྷགཝཏ྄</span> not <span class="tibetan">བྷགབཏ</span>',
-                'Saurashtra': 'simha → <span class="saurashtra">ꢱꢶꢪ꣄ꢲ</span> not <span class="saurashtra">ꢱꢶꢪꢴ</span>',
-                'Gurmukhi': 'anna aṃta → <span class="gurmukhi">ਅੱਨ ਅਂਤ</span> not <span class="gurmukhi">ਅੰਨ ਅੰਤ</span><br/> kṛpā → <span class="sinhala">ਕ੍ਰੁʼਪਾ</span> not <span class="sinhala">ਕ੍ਰੁਪਾ</span>',
-                'Chakma': 'yayāti → <span class="chakma">𑄡𑄧𑄡𑄖𑄨</span> not <span class="chakma">𑄡𑄧𑄠𑄖𑄨</span>',
-                'Gujarati': 'kŏl → <span class="gujarati">કો˘લ્</span> not <span class="gujarati">કોલ્</span>',
-                'Oriya': 'vināyaka → <span class="oriya">ୱିନାଯକ</span> not <span class="oriya">ବିନାୟକ</span><br/>kŏlæṭ → <span class="oriya">କୋ˘ଲେʼଟ୍</span> not <span class="oriya">କୋଲେଟ୍</span>',
-                'Assamese': 'vināyaka → <span class="assamese">ৱিনাযক</span> not <span class="assamese">ৱিনায়ক</span><br/>kŏlæṭ → <span class="assamese">কো˘লেʼট্</span> not <span class="assamese">কোলেট্</span>',
-                'Bengali': 'vināyaka → <span class="bengali">ৱিনাযক</span> not <span class="bengali">বিনায়ক</span><br/>kŏlæṭ → <span class="bengali">কো˘লেʼট্</span> not <span class="bengali">কোলেট্</span>',
-                'Limbu': 'jha ña ṣa ṃ → <span class="limbu">ᤉ ᤊ ᤚ ᤲ</span> not <span class="limbu">ᤈ ᤏ ᤙ ᤱ</span>',
-                'MeeteiMayek': 'kūṭākṣara → <span class="meeteimayek">ꯀꫬꫤꯥꯛꫪꯔ</span> not <span class="meeteimayek">ꯀꯨꯇꯥꯛꯁꯔ</span>',
-                'Tamil': 'maṃtana → <span class="tamil">மம்ʼதந</span> not <span class="tamil">மந்தன</span>',
-                'Malayalam': 'daṃtam kaṉi → <span class="malayalam">ദംതമ് കഩി</span> not <span class="malayalam">ദന്തം കനി</span> <br/> kæpôḍ → <span class="malayalam">കെʼപാʼഡ്</span> not <span class="malayalam">കെപാഡ്</span>',
-                'Telugu': 'khaṇḍam → <span class="telugu">ఖణ్డమ్</span> not <span class="telugu">ఖండం</span> <br/> kæpôḍ → <span class="telugu">కెʼపాʼడ్</span> not <span class="telugu">కెపాడ్</span>',
-                'Kannada': 'khaṇḍam → <span class="kannada">ಖಣ್ಡಮ್</span> not <span class="kannada">ಖಂಡಂ</span> <br/> kæpôḍ → <span class="kannada">ಕೆʼಪಾʼಡ್</span> not <span class="telugu">ಕೆಪಾಡ್</span>',
-                'Devanagari': 'සඳහන් → <span class="devanagari">सँˆदहन्</span> not <span class="devanagari">सँदहन्</span>',
-                'Sinhala': 'kôṭ hām̐ → <span class="sinhala">කාʼට් හූංʼ</span> not <span class="sinhala">කාට් හූං</span>'
-            },
-            preserveSourceExampleIn: {},
             preOptionsGroup: {
                 'Tamil': [{
                     label: 'Transcribe Tamil <br/><small><span class="tamil">மதம், நகம்</span> → madam, nagam</small>',
@@ -68,11 +41,8 @@ const ScriptMixin = {
                     label: 'Sajjhāya orthography text <br/><small><div>e.g. พุท์ธ</div></small>',
                     value: 'ThaiSajjhayaOrthography'
                 }, {
-                    label: 'Nativized Sajjhāya text <br/><small><div>e.g. พุท์ธะ</div></small>',
+                    label: 'Sajjhāya orthography (Thai Nativized) <br/><small><div>e.g. พุท์ธะ</div></small>',
                     value: 'ThaiSajjhayawithA'
-                }, {
-                    label: 'Thai Phonetic text<br/><small><div>e.g. ตะต͜ระ ราจ̥ะ</div></small>',
-                    value: 'ThaiPhonetic'
                 }],
                 'TaiTham': [{
                     label: 'Tai Tham Lao',
@@ -88,7 +58,7 @@ const ScriptMixin = {
                     label: 'Sajjhāya orthography text <br/><small><div class="laopali">e.g. ພຸທ໌ຘ</div></small>',
                     value: 'LaoSajhayaOrthography'
                 }, {
-                    label: 'Nativized Sajjhāya text <br/><small><div class="laopali">e.g. ພຸທ໌ຘະ</div></small>',
+                    label: 'Sajjhāya orthography with ะ text <br/><small><div class="laopali">e.g. ພຸທ໌ຘະ</div></small>',
                     value: 'LaoSajhayaOrthographywithA'
                 }],
                 'Devanagari': [{
@@ -117,7 +87,7 @@ const ScriptMixin = {
                 'Grantha': [{
                     label: 'Prakrit orthography<br/><small><div class="grantha">e.g. 𑌬𑍁𑌂𑌧𑌀</div></small>'
                 }, {
-                    label: 'E-Grantamil encoding',
+                    label: 'Use e-Grantamil encoding',
                     value: 'egrantamil'
                 }],
                 'Sinhala': [{
@@ -125,10 +95,7 @@ const ScriptMixin = {
                     value: 'SinhalaPali'
                 }],
                 'Malayalam': [{
-                    label: 'Show Chillus <br/><small><div class="malayalam">ധർമൻ</span> → /dharˍmanˍ/ not /dharman/</div></small>',
-                    value: 'ShowChillus'
-                }, {
-                    label: 'Prakrit orthography text<br/><small><div> e.g. <span class="malayalamold">ബുംധഀ</span></div></small>',
+                    label: 'Prakrit orthography text',
                     value: 'MalayalamPrakrit'
                 }],
                 'Siddham': [{
@@ -143,10 +110,6 @@ const ScriptMixin = {
                     label: 'Short vowels not shown',
                     value: 'UrduShortNotShown'
                 }],
-                'Takri': [{
-                    label: 'Medieval Takri orthography text<br/><small>Convert <span class="takri">𑚋</span> as /kha/</small>',
-                    value: 'TakriArchaicKha'
-                }],
                 'Chakma': [{
                     label: 'Pali orthography text<br/><small> e.g. <span class="chakma">𑄖𑄗𑄂𑄉𑄖</span></small>',
                     value: 'ChakmaPali'
@@ -156,73 +119,45 @@ const ScriptMixin = {
                 'DevanagariLimbu': [{
                     label: 'Limbu Devanagari conventions<br/><small><span class="limbudev">e.g. ए़ ओ़ ए़ः के़ को़ के़ः</span></small>',
                     value: 'LimbuDevanagariConvention'
-                }],
-                'TamilSaurashtra': [{
-                    label: 'Convert : as Haaru <small><br/><span class="tamil">நீ:</span> → </small><span class="saurashtra">ꢥꢴꢷ</span>',
-                    value: 'SaurastraHaaruColonTamil'
                 }]
             },
             postOptionsGroupSpecific: {
                 'DevanagariLimbu': [{
-                    label: 'Limbu Devanagari conventions<small><br/><span class="limbu">ᤀᤧ ᤀᤨ ᤀᤧ᤺ ᤁᤧ ᤁᤨ ᤁᤧ᤺</span> → <span class="limbudev">ए़ ओ़ ए़ः के़ को़ के़ः</span></small>',
+                    label: 'Use Limbu Devanagari conventions<small><br/><span class="limbu">ᤀᤧ ᤀᤨ ᤀᤧ᤺ ᤁᤧ ᤁᤨ ᤁᤧ᤺</span> → <span class="limbudev">ए़ ओ़ ए़ः के़ को़ के़ः</span></small>',
                     value: 'LimbuDevanagariConvention'
-                }],
-                'TamilSaurashtra': [{
-                    label: 'Convert Saurashtra Haaru as :<small><br/><span class="saurashtra">ꢥꢴꢷ</span> → <span class="tamil">நீ:</span></small>',
-                    value: 'SaurastraHaaruColon'
                 }]
             },
             postOptionsGroup: {
                 'Tamil': [{
-                        label: 'Disable <span class="tamil">ஶ</span><br/><small><span class="tamil">ஶ → ஷ²</span></small>',
-                        value: 'TamilDisableSHA'
-                    }, {
-                        label: 'Subscript numerals<br/><small><span class="tamil">க²க³க⁴ → க₂க₃க₄</span></small>',
-                        value: 'TamilSubScript'
-                    }, {
-                        label: 'Old orthography<br/><small><span class="tamil">லை னா</span> → <span class="tamilold">லை னா</span></small>',
-                        value: 'oldtamilortho'
-                    }, {
-                        label: 'Grantha Visarga<br/><small><span class="tamil">நம꞉ → நம𑌃</span></small>',
-                        value: 'TamilGranthaVisarga'
-                    },
-                    // { label: 'Disable ௐ<br/><small><span class="tamil">ௐ → ஓம்</span></small>', value: 'TamilOmDisable' },
-                    {
-                        label: 'Remove apostrophe<br/><small><span class="tamil">ருʼம்ʼ → ரும்</span></small>',
-                        value: 'TamilRemoveApostrophe'
-                    }, {
-                        label: 'Remove diacritic numerals<br/><small><span class="tamil">க²க³க⁴ → ககக</span></small>',
-                        value: 'TamilRemoveNumbers'
-                    }, {
-                        label: 'Contextual <span class="tamil">ள</><br/><small>(Experimental)</small><br/><small><span class="tamil">ப்ரலய → ப்ரளய</span></small>',
-                        value: 'ContextualLLa'
-                    }, {
-                        label: 'Only word-final <span class="tamil">ன</><br/><small><span class="tamil">ஆனனன் → ஆநநன்</span></small>',
-                        value: 'FinalNNa'
-                    }, {
-                        label: 'Dandas<br/><small><span class="tamil">. .. → । ॥</span></small>',
-                        value: 'RetainTamilDanda'
-                    }, {
-                        label: 'Tamil numerals<br/><small><span class="tamil">123 → ௧௨௩</span></small>',
-                        value: 'RetainTamilNumerals'
-                    }
-                    // { label: 'Medieval e/o with Pulli<br/><small><span class="tamil">ஒ ஓ கொ கோ → ஒ் ஒ கெ்ா கொ</span></small>', value: 'MedievalTamilOrthography' }
-                ],
-                'TamilExtended': [{
-                    label: 'Dandas <br/><small><span class="tamilextended">. .. → । ॥</span></small>',
-                    value: 'Dot2Dandas'
+                    label: 'Old orthography<br/><small><span class="tamil">லை னா</span> → <span class="tamilold">லை னா</span></small>',
+                    value: 'oldtamilortho'
                 }, {
-                    label: 'Avoid Anusvara <br/><small><span class="tamilextended">സംഘം → സങ്‌ഘമ്</span></small>',
-                    value: 'TamilExtendedAnusvara'
+                    label: 'Use Grantha Visarga<br/><small><span class="tamil">நம꞉ → நம𑌃</span></small>',
+                    value: 'TamilGranthaVisarga'
                 }, {
-                    label: 'Contextual <span class="tamil">ன</span> <br/><small><span class="tamilextended">ഗജാനനന്‌ → ഗജാഩഩഩ്‌</span></small>',
-                    value: 'TamilExtendedNNA'
+                    label: 'Subscript numerals<br/><small><span class="tamil">க²க³க⁴ → க₂க₃க₄</span></small>',
+                    value: 'TamilSubScript'
                 }, {
-                    label: 'Tamil Style -u -ū <br/><small>(Core Grantha)</small><br/><small><span class="tamilextended">ഗുബൂഫുഭൂ → ഗ‍ുബ‍ൂഫ‍ുഭ‍ൂ</span></small>',
-                    value: 'TamilStyleUUCore'
+                    label: 'Dandas<br/><small><span class="tamil">. .. → । ॥</span></small>',
+                    value: 'RetainTamilDanda'
                 }, {
-                    label: 'Tamil Style -u -ū <br/><small>(Tamilized Grantha)</small><br/><small><span class="tamilextended">ജൂസുഷുഹൂ → ജ‍ൂസ‍ുഷ‍ുഹ‍ൂ</span></small>',
-                    value: 'TamilStyleUUOther'
+                    label: 'Disable ௐ<br/><small><span class="tamil">ௐ → ஓம்</span></small>',
+                    value: 'TamilOmDisable'
+                }, {
+                    label: 'Disable ஶ<br/><small><span class="tamil">ஶ → ஸ²</span></small>',
+                    value: 'TamilDisableSHA'
+                }, {
+                    label: 'Remove apostrophe<br/><small><span class="tamil">ருʼம்ʼ → ரும்</span></small>',
+                    value: 'TamilRemoveApostrophe'
+                }, {
+                    label: 'Remove diacritic numerals<br/><small><span class="tamil">க²க³க⁴ → ககக</span></small>',
+                    value: 'TamilRemoveNumbers'
+                }, {
+                    label: 'Tamil numerals<br/><small><span class="tamil">123 → ௧௨௩</span></small>',
+                    value: 'RetainTamilNumerals'
+                }, {
+                    label: 'Medieval e/o with Pulli<br/><small><span class="tamil">ஒ ஓ கொ கோ → ஒ் ஒ கெ்ா கொ</span></small>',
+                    value: 'MedievalTamilOrthography'
                 }],
                 'Chakma': [{
                     label: 'Enable all conjuncts<br/><small><span class="chakma">𑄇𑄴𑄈𑄧 𑄉𑄴𑄊𑄧 𑄚𑄴𑄖𑄧 → 𑄇𑄳𑄈𑄧 𑄉𑄳𑄊𑄧 𑄚𑄳𑄖𑄧</span></small>',
@@ -241,32 +176,21 @@ const ScriptMixin = {
                     label: 'Disable Repha<br/><small><span class="newa">𑐢𑐬𑑂𑐩 → 𑐢𑐬𑑂‍𑐩</span></small>',
                     value: 'NewaDisableRepha'
                 }, {
-                    label: 'Special /ta/ conjunct<br/><small><span class="newa">𑐟𑑂𑐥𑐟𑑂𑐩𑐟𑑂𑐰 → 𑐟𑑂‍𑐥𑐟𑑂‍𑐩𑐟𑑂‍𑐰</span></small>',
+                    label: 'Use special /ta/ conjunct<br/><small><span class="newa">𑐟𑑂𑐥𑐟𑑂𑐩𑐟𑑂𑐰 → 𑐟𑑂‍𑐥𑐟𑑂‍𑐩𑐟𑑂‍𑐰</span></small>',
                     value: 'NewaSpecialTa'
                 }, {
-                    label: 'Devanagari-based Newa font<br/><small><span class="newa">𑐧𑐸𑐡𑑂𑐢𑑅</span> →<span class="nepaldevafont">बुद्धः</span></small>',
+                    label: 'Use Devanagari-based Newa font<br/><small><span class="newa">𑐧𑐸𑐡𑑂𑐢𑑅</span> →<span class="nepaldevafont">बुद्धः</span></small>',
                     value: 'nepaldevafont'
                 }],
                 'Oriya': [{
-                    label: 'ଵ instead of ୱ<br/><small>ଭୱତି → ଭଵତି</small>',
+                    label: 'Use ଵ instead of ୱ<br/><small>ଭୱତି → ଭଵତି</small>',
                     value: 'OriyaVaAlt'
                 }, {
-                    label: 'ୟ everywhere<br/><small>ଯୟାତି ଯଜ୍ଞ → ୟୟାତି ୟଜ୍ଞ</small>',
+                    label: 'Use ୟ everywhere<br/><small>ଯୟାତି ଯଜ୍ଞ → ୟୟାତି ୟଜ୍ଞ</small>',
                     value: 'OriyaYYA'
                 }],
                 'Bengali': [{
-                    label: 'য় everywhere<br/><small>যয়াতি যজ্ঞ → য়য়াতি য়জ্ঞ</small>',
-                    value: 'BengaliYYA'
-                }],
-                'KhamtiShan': [{
-                    label: 'Myanmar numerals<br/><small><span class="khamtishan">႑႒႓</span> → <span class="khamtishan">၁၂၃</span></small>',
-                    value: 'KhamiShanMyanmarNumerals'
-                }, {
-                    label: 'Use ꩳ<br/><small><span class="khamtishan">ရ</span> → <span class="khamtishan">ꩳ</span></small>',
-                    value: 'KhamtiShanRa'
-                }],
-                'Assamese': [{
-                    label: 'য় everywhere<br/><small>যয়াতি যজ্ঞ → য়য়াতি য়জ্ঞ</small>',
+                    label: 'Use য় everywhere<br/><small>যয়াতি যজ্ঞ → য়য়াতি য়জ্ঞ</small>',
                     value: 'BengaliYYA'
                 }],
                 'Siddham': [{
@@ -288,28 +212,21 @@ const ScriptMixin = {
                     label: 'Variant U <br/><small><span class="siddham">𑖄 → 𑗛</span></small>',
                     value: 'UseAlternateU'
                 }, {
-                    label: 'MuktamSiddham font',
+                    label: 'Use MuktamSiddham font',
                     value: 'siddhammukta'
                 }, {
-                    label: 'ApDevSiddham font',
+                    label: 'Use ApDevSiddham font',
                     value: 'siddhamap'
                 }],
                 'Devanagari': [{
-                    label: 'ऍ → ॲ',
+                    label: 'Use ॲ instead of ऍ',
                     value: 'DevanagariACandra'
                 }, {
                     label: 'Prishthamatra orthography<br/><small>के कै को कौ → कॎ कॎे कॎा कॎो</small>',
                     value: 'DevanagariPrishtamatra'
                 }],
-                'Takri': [{
-                    label: 'Medieval Takri orthography <br/><small><span class="takri">𑚋</span> represents both /kha/ and /ṣa/</small>',
-                    value: 'TakriArchaicKha'
-                }, {
-                    label: 'Avoid duplicated consonants<br/><small>Convert <span class="takri">𑚄𑚙𑚶𑚙𑚤</span> → <span class="takri">𑚄𑚙𑚤</span></small>',
-                    value: 'TakriRemoveGemination'
-                }],
                 'Gurmukhi': [{
-                    label: 'Yakaash<br/><small>ਕ੍ਯ → ਕੵ</small>',
+                    label: 'Use Yakaash<br/><small>ਕ੍ਯ → ਕੵ</small>',
                     value: 'GurmukhiYakaash'
                 }, {
                     label: 'Gurmukhi Numerals<br/><small>123 → ੧੨੩</small>',
@@ -322,11 +239,8 @@ const ScriptMixin = {
                     label: 'Sajjhāya Orthography<br/><small><div>พุทฺธ → พุท์ธ</div></small>',
                     value: 'ThaiSajjhayaOrthography'
                 }, {
-                    label: 'Nativized Sajjhaya<br/><small><div>พุทฺธํ → พุท์ธัง</div></small>',
+                    label: 'Sajjhāya Orthography (Thai Nativized)<br/><small><div>พุทฺธ → พุท์ธะ</div></small>',
                     value: 'ThaiSajjhayawithA'
-                }, {
-                    label: 'Thai Phonetic<br/><small><div>พุทฺธตฺว → <span class="thainative">บุดธะต͜วะ</span></div></small>',
-                    value: 'ThaiNativeConsonants'
                 }, {
                     label: 'Sara a ะ as Visarga<br/><small><div>นมัห์ → นมะ</div></small>',
                     value: 'ThaiVisargaSaraA'
@@ -338,7 +252,7 @@ const ScriptMixin = {
                     label: 'Sajjhāya Orthography<br/><small><div class="laopali">ພຸທ຺ຘ → ພຸທ໌ຘ</div></small>',
                     value: 'LaoSajjhaya'
                 }, {
-                    label: 'Nativized Sajjhāya<br/><small><div  class="laopali">ພຸທ຺ຘໍ → ພຸທ໌ຘັງ</div></small>',
+                    label: 'Sajjhāya Orthography with ะ<br/><small><div  class="laopali">ພຸທ຺ຘ → ພຸທ໌ຘະ</div></small>',
                     value: 'LaoSajjhayawithA'
                 }],
                 'Lao': [{
@@ -353,43 +267,33 @@ const ScriptMixin = {
                     value: 'TaiKuen'
                 }],
                 'Soyombo': [{
-                    label: 'Syllabize input<br/><small><span class="soyombo → ">𑩲𑩖𑩮𑩑𑪁𑩫𑪘𑪙𑩾 → 𑩲𑩖 𑩮𑩑 𑪁 𑩫𑪘𑪙𑩾</span></small>',
-                    value: 'SoyomboSyllabize'
-                }, {
-                    label: 'Sanskrit palatals<br/><small><span class="soyombo">𑩵 𑩶 𑩷 → 𑩡 𑩢 𑩣</span></small>',
+                    label: 'Use Sanskrit palatals<br/><small><span class="soyombo">𑩵 𑩶 𑩷 → 𑩡 𑩢 𑩣</span></small>',
                     value: 'SoyomboSanskritPalatals'
                 }, {
-                    label: 'Mongolian finals<br/><small><span class="soyombo">ak ag ad → 𑩐𑪋 𑩐𑪊 𑩐𑪍</span></small>',
+                    label: 'Use Mongolian finals<br/><small><span class="soyombo">ak ag ad → 𑩐𑪋 𑩐𑪊 𑩐𑪍</span></small>',
                     value: 'SoyomboFinals'
                 }, {
-                    label: 'Initial-form /ra/, /la/, /sa/<br/><small><span class="soyombo">𑩼𑪙𑩫 𑩽𑪙𑩫 𑪁𑪙𑩫 → 𑪆𑩫 𑪇𑩫 𑪉𑩫</span></small>',
+                    label: 'Use initial-form /ra/, /la/, /sa/<br/><small><span class="soyombo">𑩼𑪙𑩫 𑩽𑪙𑩫 𑪁𑪙𑩫 → 𑪆𑩫 𑪇𑩫 𑪉𑩫</span></small>',
                     value: 'SoyomboInitials'
                 }, {
                     label: 'Use Tsheg<br/><small><span class="soyombo">𑩯 𑩴𑩖 → 𑩯𑪚𑩴𑩖</span></small>',
                     value: 'SoyomboSpaceTscheg'
                 }],
                 'Marchen': [{
-                    label: 'Sanskrit palatals<br/><small><span class="marchen">𑲂 𑲃 𑲄 𑲄𑲮 → 𑱶 𑱷 𑱸 𑱸𑲮</span></small>',
+                    label: 'Use Sanskrit palatals<br/><small><span class="marchen">𑲂 𑲃 𑲄 𑲄𑲮 → 𑱶 𑱷 𑱸 𑱸𑲮</span></small>',
                     value: 'MarchenSanskritPalatals'
                 }],
-                'Mongolian': [{
-                    label: 'Syllabize Input<br/><small><span class="mongolian">ᠮᠠᢏᢈ → ᠮᠠ᠋ ᢏᢈ</span></small>',
-                    value: 'MongolianSyllabize'
-                }],
                 'Tibetan': [{
-                    label: 'Syllabize input<br/><small><span class="tibetan → ">བོདྷིསཏྟྭ → བོ་དྷི་ས་ཏྟྭ</span></small>',
-                    value: 'TibetanSyllabize'
-                }, {
-                    label: 'Sanskrit palatals<br/><small><span class="tibetan">ཙ ཚ ཛ ཛྷ → ཅ ཆ ཇ ཇྷ</span></small>',
+                    label: 'Use Sanskrit palatals<br/><small><span class="tibetan">ཙ ཚ ཛ ཛྷ → ཅ ཆ ཇ ཇྷ</span></small>',
                     value: 'TibetanSanskritPalatals'
                 }, {
-                    label: 'Bindu with nada<<br/><small><span class="tibetan">ཨྃ → ཨྂ</span></small>',
+                    label: 'Use <i>Bindu with nada</i><br/><small><span class="tibetan">ཨྃ → ཨྂ</span></small>',
                     value: 'TibetanNada'
                 }, {
                     label: 'Use space<br/><small><span class="tibetan">ན་མོ → ན མོ</span></small>',
                     value: 'TibetanTsheg'
                 }, {
-                    label: 'Dbu Med (Ume) style<br/><small><span class="tibetan">བུདྡྷཿ</span> → <span class="tibetandbumed">བུདྡྷཿ</span></small>',
+                    label: 'Use Dbu Med (Ume) style<br/><small><span class="tibetan">བུདྡྷཿ</span> → <span class="tibetandbumed">བུདྡྷཿ</span></small>',
                     value: 'tibetandbumed'
                 }],
                 'Sinhala': [{
@@ -407,17 +311,8 @@ const ScriptMixin = {
                     value: 'ranjanawartu'
                 }],
                 'Telugu': [{
-                    label: 'Arasunna as Chandrabindu<br/><small><span class="telugu"> హూఀ → హూఁ</span></small>',
+                    label: 'Use Arasunna as Chandrabindu<br/><small><span class="telugu"> హూఀ → హూఁ</span></small>',
                     value: 'TeluguArasunnaChandrabindu'
-                }, {
-                    label: 'Telugu Repha <br/><small><i>(Valapala Gilaka)</i></small> <br/><small><span class="telugu">ధర్మ → ధర్‍మ</span></small>',
-                    value: 'TeluguReph'
-                }, {
-                    label: 'Tamil-Style Zha <br/><small><span class="telugu">ఆఴ్వార్</span> → <span class="teluguzha">ఆఴ్వార్</span></span></small>',
-                    value: 'TeluguTamilZha'
-                }, {
-                    label: 'Tamil-Style Rra <br/><small><span class="telugu">ఆఱు</span> → <span class="teluguzha">ఆౘు</span></small>',
-                    value: 'TeluguTamilRra'
                 }, {
                     label: 'Dandas<br/><small><span class="telugu">. .. → । ॥</span></small>',
                     value: 'RetainTeluguDanda'
@@ -429,13 +324,6 @@ const ScriptMixin = {
                     label: 'Dandas<br/><small><span class="gujarati">. .. → । ॥</span></small>',
                     value: 'RetainGujaratiDanda'
                 }],
-                'PhagsPa': [{
-                    label: 'Tibetan Style<br/><small><span class="phagspa">ꡳꡛ ᠂ ꡂꡜ</span> → <span class="phagspatib">ꡳꡛ ᠂ ꡂꡜ</span></small>',
-                    value: 'PhagsPaTib'
-                }, {
-                    label: 'Seal Style   <br/><small><span class="phagspa">ꡳꡛ ᠂ ꡂꡜ</span> → <span class="phagspaseal">ꡳꡛ ᠂ ꡂꡜ</span></span></small>',
-                    value: 'PhagsPaSeal'
-                }],
                 'Kannada': [{
                     label: 'Dandas<br/><small><span class="kannada">. .. → । ॥</span></small>',
                     value: 'RetainKannadaDanda'
@@ -444,19 +332,16 @@ const ScriptMixin = {
                     value: 'RetainKannadaNumerals'
                 }],
                 'Grantha': [{
-                    label: 'Grantha old AU vowel sign <br/><small><span class="grantha">𑌕𑍗 → 𑌕𑍌</span></small>',
+                    label: 'Use Grantha old AU vowel sign <br/><small><div class="grantha">𑌕𑍗 → 𑌕𑍌</div></small>',
                     value: 'GranthaOldau'
                 }, {
-                    label: 'Prakrit orthography <br/><small><span class="grantha">𑌬𑍁𑌦𑍍𑌧𑌂 → 𑌬𑍁𑌂𑌧𑌀</span></small>',
+                    label: 'Prakrit orthography <br/><small><div class="grantha">𑌬𑍁𑌦𑍍𑌧𑌂 → 𑌬𑍁𑌂𑌧𑌀</div></small>',
                     value: 'GranthaPrakrit'
                 }, {
-                    label: 'Other final forms <br/><small><span class="grantha">𑌦𑌿𑌕𑍍</span> → <span class="granthalig">𑌦𑌿𑌕𑍍</span></small>',
-                    value: 'granthafinal'
-                }, {
-                    label: 'Noto Serif Grantha <br/><small><span class="grantha">𑌬𑍁𑌦𑍍𑌧𑌂</span> → <span class="granthaserif">𑌬𑍁𑌦𑍍𑌧𑌂</span></small>',
+                    label: 'Use Noto Serif Grantha <br/><small><span class="grantha">𑌬𑍁𑌦𑍍𑌧𑌂</span> → <span class="granthaserif">𑌬𑍁𑌦𑍍𑌧𑌂</span></small>',
                     value: 'granthaserif'
                 }, {
-                    label: 'E-Grantamil encoding',
+                    label: 'Use e-Grantamil encoding',
                     value: 'egrantamil'
                 }],
                 'Urdu': [{
@@ -492,7 +377,7 @@ const ScriptMixin = {
                     value: 'NasaltoAnsvaraIASTISO'
                 }],
                 'RomanReadable': [{
-                    label: 'Alternate long/short e/o <br/><small>e\' e o\' o → e ae o oa</small>',
+                    label: 'Use alternate long/short e/o <br/><small>e\' e o\' o → e ae o oa</small>',
                     value: 'RomanReadableLongEO'
                 }, {
                     label: 'Capitalize sentences',
@@ -519,7 +404,7 @@ const ScriptMixin = {
                     value: 'LimbuSpellingSaI'
                 }],
                 'Sundanese': [{
-                    label: 'Archaic conjuncts<br/><small><span class="sundanese">ᮊ᮪ᮙ ᮊ᮪ᮝ ᮃᮊ᮪ ᮃᮙ᮪ → ᮊᮬ ᮊᮭ ᮃᮾ ᮃᮿ</span></small>',
+                    label: 'Sundanese historical conjuncts<br/><small><span class="sundanese">ᮊ᮪ᮙ ᮊ᮪ᮝ ᮃᮊ᮪ ᮃᮙ᮪ → ᮊᮬ ᮊᮭ ᮃᮾ ᮃᮿ</span></small>',
                     value: 'SundaneseHistoricConjuncts'
                 }],
                 'Malayalam': [{
@@ -542,10 +427,10 @@ const ScriptMixin = {
                     value: 'RetainMalayalamNumerals'
                 }],
                 'ZanabazarSquare': [{
-                    label: 'Sanskrit palatals<br/><small><span class="zanabazarsquare">𑨣 𑨤 𑨥 → 𑨐 𑨑 𑨒</span></small>',
+                    label: 'Use Sanskrit palatals<br/><small><span class="zanabazarsquare">𑨣 𑨤 𑨥 → 𑨐 𑨑 𑨒</span></small>',
                     value: 'ZanabazarSanskritPalatals'
                 }, {
-                    label: 'Tsheg<br/><small><span class="zanabazarsquare">𑨝 𑨢𑨆 → 𑨝𑩁𑨢𑨆</span></small>',
+                    label: 'Use Tsheg<br/><small><span class="zanabazarsquare">𑨝 𑨢𑨆 → 𑨝𑩁𑨢𑨆</span></small>',
                     value: 'ZanzabarSpaceTsheg'
                 }, {
                     label: 'Contextual ya/ra/la/va & Repha<br/><small><span class="zanabazarsquare">𑨋𑩇𑨪 𑨋𑩇𑨫 𑨋𑩇𑨬 𑨋𑩇𑨭 𑨫𑩇𑨋 → 𑨋𑨻 𑨋𑨼 𑨋𑨽 𑨋𑨾 𑨺𑨋</span></small>',
@@ -572,7 +457,7 @@ const ScriptMixin = {
                     wikicode: 'Ahom_alphabet',
                     font: {
                         'name': 'Noto Sans Ahom',
-                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/phaseIII_only/unhinted/otf/NotoSerifAhom/NotoSerifAhom-Regular.otf'
+                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/unhinted/otf/NotoSerifAhom/NotoSerifAhom-Regular.otf'
                     },
                     language: ['Others'],
                     status: ['Living', 'Living: Minor'],
@@ -607,7 +492,7 @@ const ScriptMixin = {
                         'name': '',
                         'url': ''
                     },
-                    language: ['Sanskrit & Pali', 'Sanskrit', 'Pali'],
+                    language: ['Sanskrit & Pali', 'Pali'],
                     status: ['Living', 'Living: Major'],
                     invented: ['Derived: Brahmi'],
                     region: ['East Indic', 'Indic']
@@ -637,7 +522,7 @@ const ScriptMixin = {
                         'name': 'Vimala',
                         'url': 'https://github.com/longnow/bali-fonts/blob/master/Vimala.ttf'
                     },
-                    language: ['Sanskrit & Pali', 'Sanskrit', 'Pali'],
+                    language: ['Sanskrit & Pali', 'Pali'],
                     status: ['Living', 'Living: Minor'],
                     invented: ['Derived: Brahmi', 'Derived: Pallava'],
                     region: ['South East Asian: Insular', 'South East Asian']
@@ -732,7 +617,7 @@ const ScriptMixin = {
                         'name': '',
                         'url': ''
                     },
-                    language: ['Sanskrit & Pali', 'Sanskrit', 'Pali'],
+                    language: ['Sanskrit & Pali', 'Pali'],
                     status: ['Living', 'Living: Major'],
                     invented: ['Derived: Brahmi'],
                     region: ['East Indic', 'Indic']
@@ -747,7 +632,7 @@ const ScriptMixin = {
                         'name': '',
                         'url': ''
                     },
-                    language: ['Sanskrit & Pali', 'Sanskrit', 'Pali'],
+                    language: ['Sanskrit & Pali', 'Pali'],
                     status: ['Extinct', 'Extinct: Ancient'],
                     invented: ['Derived: Brahmi'],
                     region: ['Pan-Indic', 'Indic']
@@ -760,9 +645,9 @@ const ScriptMixin = {
                     wikicode: 'Bhaiksuki_alphabet',
                     font: {
                         'name': 'Noto Sans Bhaiksuki',
-                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/phaseIII_only/unhinted/otf/NotoSansBhaiksuki/NotoSansBhaiksuki-Regular.otf'
+                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/unhinted/otf/NotoSansBhaiksuki/NotoSansBhaiksuki-Regular.otf'
                     },
-                    language: ['Sanskrit & Pali', 'Sanskrit', 'Pali'],
+                    language: ['Sanskrit & Pali', 'Pali'],
                     status: ['Extinct', 'Extinct: Ancient'],
                     invented: ['Derived: Brahmi'],
                     region: ['North Indic', 'Indic']
@@ -790,7 +675,7 @@ const ScriptMixin = {
                     wikicode: 'Buhid_alphabet',
                     font: {
                         'name': 'Nnoto Sans Buhid',
-                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/phaseIII_only/unhinted/otf/NotoSansBuhid/NotoSansBuhid-Regular.otf'
+                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/unhinted/otf/NotoSansBuhid/NotoSansBuhid-Regular.otf'
                     },
                     language: ['Others'],
                     status: ['Living', 'Living: Minor'],
@@ -807,7 +692,7 @@ const ScriptMixin = {
                         'name': '',
                         'url': ''
                     },
-                    language: ['Sanskrit & Pali', 'Sanskrit', 'Pali'],
+                    language: ['Sanskrit & Pali', 'Pali'],
                     status: ['Living', 'Living: Major'],
                     invented: ['Derived: Brahmi', 'Derived: Pallava'],
                     region: ['South East Asian: Mainland', 'South East Asian']
@@ -820,7 +705,7 @@ const ScriptMixin = {
                     wikicode: 'Chakma_alphabet',
                     font: {
                         'name': 'Noto Sans Chakma',
-                        'url': 'https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha/aksharamukha-front/src/statics/chakmapali.otf'
+                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/unhinted/NotoSansChakma-Regular.ttf'
                     },
                     language: ['Only Pali', 'Pali'],
                     status: ['Living', 'Living: Minor'],
@@ -851,9 +736,9 @@ const ScriptMixin = {
                     wikicode: 'Devanagari',
                     font: {
                         'name': 'Noto Sans Devanagari',
-                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/phaseIII_only/unhinted/otf/NotoSansDevanagari/NotoSansDevanagari-Regular.otf'
+                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/unhinted/otf/NotoSansDevanagari/NotoSansDevanagari-Regular.otf'
                     },
-                    language: ['Sanskrit & Pali', 'Sanskrit', 'Pali'],
+                    language: ['Sanskrit & Pali', 'Pali'],
                     status: ['Living', 'Living: Major'],
                     invented: ['Derived: Brahmi'],
                     region: ['North Indic', 'Indic']
@@ -866,9 +751,9 @@ const ScriptMixin = {
                     wikicode: 'Dogri_script',
                     font: {
                         'name': 'Noto Serif Dogra',
-                        'url': 'https://github.com/googlefonts/noto-fonts/tree/master/phaseIII_only/unhinted/otf/NotoSerifDogra'
+                        'url': 'https://github.com/googlefonts/noto-fonts/tree/master/unhinted/otf/NotoSerifDogra'
                     },
-                    language: ['Sanskrit & Pali', 'Sanskrit', 'Pali'],
+                    language: ['Sanskrit & Pali', 'Pali'],
                     status: ['Extinct', 'Extinct: Pre-Modern'],
                     invented: ['Derived: Brahmi'],
                     region: ['North Indic', 'Indic']
@@ -881,7 +766,7 @@ const ScriptMixin = {
                     wikicode: 'Gunjala_Gondi_Lipi',
                     font: {
                         'name': 'Noto Sans Gunjala Gondi',
-                        'url': 'https://github.com/googlefonts/noto-fonts/tree/master/phaseIII_only/unhinted/otf/NotoSansGunjalaGondi'
+                        'url': 'https://github.com/googlefonts/noto-fonts/tree/master/unhinted/otf/NotoSansGunjalaGondi'
                     },
                     language: ['Others'],
                     status: ['Living', 'Living: Minor'],
@@ -896,9 +781,9 @@ const ScriptMixin = {
                     wikicode: 'Gondi_writing',
                     font: {
                         'name': 'Noto Sans Masaram Gondi',
-                        'url': 'https://github.com/googlefonts/noto-fonts/tree/master/phaseIII_only/unhinted/otf/NotoSansMasaramGondi'
+                        'url': 'https://github.com/googlefonts/noto-fonts/tree/master/unhinted/otf/NotoSansMasaramGondi'
                     },
-                    language: ['Sanskrit & Pali', 'Sanskrit', 'Pali', 'Others'],
+                    language: ['Sanskrit & Pali', 'Pali', 'Others'],
                     status: ['Living', 'Living: Minor'],
                     invented: ['Invented'],
                     region: ['North Indic', 'Indic']
@@ -912,9 +797,9 @@ const ScriptMixin = {
                     omnicode: 'grantha',
                     font: {
                         'name': 'Noto Sans Grantha',
-                        'url': 'https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha/aksharamukha-front/src/statics/NotoSansGrantha-RegularZach.otf'
+                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/unhinted/otf/NotoSansGrantha/NotoSansGrantha-Regular.otf'
                     },
-                    language: ['Sanskrit & Pali', 'Sanskrit', 'Pali'],
+                    language: ['Sanskrit & Pali', 'Pali'],
                     status: ['Living', 'Living: Minor'],
                     invented: ['Derived: Brahmi', 'Derived: Pallava'],
                     region: ['South Indic', 'Indic']
@@ -930,7 +815,7 @@ const ScriptMixin = {
                         'name': 'e-Pandya',
                         'url': 'https://github.com/virtualvinodh/aksharamukha/blob/master/aksharamukha-front/src/statics/e-Pandya.ttf'
                     },
-                    language: ['Sanskrit & Pali', 'Sanskrit', 'Pali'],
+                    language: ['Sanskrit & Pali', 'Pali'],
                     status: ['Extinct', 'Extinct: Ancient'],
                     invented: ['Derived: Brahmi', 'Derived: Pallava'],
                     region: ['South Indic', 'Indic']
@@ -943,9 +828,9 @@ const ScriptMixin = {
                     wikicode: 'Gujarati_alphabet',
                     font: {
                         'name': 'Noto Serif Gujarati',
-                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/phaseIII_only/unhinted/otf/NotoSerifGujarati/NotoSerifGujarati-Regular.otf'
+                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/unhinted/otf/NotoSerifGujarati/NotoSerifGujarati-Regular.otf'
                     },
-                    language: ['Sanskrit & Pali', 'Sanskrit', 'Pali'],
+                    language: ['Sanskrit & Pali', 'Pali'],
                     status: ['Living', 'Living: Major'],
                     invented: ['Derived: Brahmi'],
                     region: ['West Indic', 'Indic']
@@ -958,7 +843,7 @@ const ScriptMixin = {
                     wikicode: 'Hanunó%27o_alphabet',
                     font: {
                         'name': 'Noto Sans Hanunoo',
-                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/phaseIII_only/unhinted/otf/NotoSansHanunoo/NotoSansHanunoo-Regular.otf'
+                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/unhinted/otf/NotoSansHanunoo/NotoSansHanunoo-Regular.otf'
                     },
                     language: ['Others'],
                     status: ['Living', 'Living: Minor'],
@@ -973,9 +858,9 @@ const ScriptMixin = {
                     wikicode: 'Javanese_script',
                     font: {
                         'name': 'Noto Sans Javanese',
-                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/phaseIII_only/unhinted/otf/NotoSansJavanese/NotoSansJavanese-Regular.otf'
+                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/unhinted/otf/NotoSansJavanese/NotoSansJavanese-Regular.otf'
                     },
-                    language: ['Sanskrit & Pali', 'Sanskrit', 'Pali'],
+                    language: ['Sanskrit & Pali', 'Pali'],
                     status: ['Living', 'Living: Minor'],
                     invented: ['Derived: Brahmi', 'Derived: Pallava'],
                     region: ['South East Asian: Insular', 'South East Asian']
@@ -988,7 +873,7 @@ const ScriptMixin = {
                     wikicode: 'Kaithi',
                     font: {
                         'name': 'Noto Sans Kaithi',
-                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/phaseIII_only/unhinted/otf/NotoSansKaithi/NotoSansKaithi-Regular.otf'
+                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/unhinted/otf/NotoSansKaithi/NotoSansKaithi-Regular.otf'
                     },
                     language: ['Only Pali', 'Pali'],
                     status: ['Extinct', 'Extinct: Pre-Modern'],
@@ -1003,9 +888,9 @@ const ScriptMixin = {
                     wikicode: 'Kannada_alphabet',
                     font: {
                         'name': 'Noto Sans Kannada',
-                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/phaseIII_only/unhinted/otf/NotoSansKannada/NotoSansKannada-Regular.otf'
+                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/unhinted/otf/NotoSansKannada/NotoSansKannada-Regular.otf'
                     },
-                    language: ['Sanskrit & Pali', 'Sanskrit', 'Pali'],
+                    language: ['Sanskrit & Pali', 'Pali'],
                     status: ['Living', 'Living: Major'],
                     invented: ['Derived: Brahmi'],
                     region: ['South Indic', 'Indic']
@@ -1019,8 +904,8 @@ const ScriptMixin = {
                     miscsrc: '(from <a href="https://www.unicode.org/L2/L2008/08181-n3423r.pdf">L2/08-181</a>)',
                     miscdesc: 'Khamti Shan is spoken by 50,000 people in Myanmar and India. The language has a long literary tradition which was lost as people forgot their script. In the last 5 years the script has undergone a resurgence in a new form and after a pilot literacy programme is to be taught throughout the region.',
                     font: {
-                        'name': 'Khamti Regular',
-                        'url': 'https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha/aksharamukha-front/src/statics/Khamti-Regular.otf'
+                        'name': '',
+                        'url': ''
                     },
                     language: ['Only Pali', 'Pali'],
                     status: ['Living', 'Living: Minor'],
@@ -1037,7 +922,7 @@ const ScriptMixin = {
                         'name': '',
                         'url': ''
                     },
-                    language: ['Sanskrit & Pali', 'Sanskrit', 'Pali'],
+                    language: ['Sanskrit & Pali', 'Pali'],
                     status: ['Extinct', 'Extinct: Ancient'],
                     invented: ['Derived: Aramaic'],
                     region: ['West Indic', 'Indic']
@@ -1050,9 +935,9 @@ const ScriptMixin = {
                     wikicode: 'Khmer_alphabet',
                     font: {
                         'name': 'Noto Sans Khmer',
-                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/phaseIII_only/unhinted/otf/NotoSerifKhmer/NotoSerifKhmer-Regular.otf'
+                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/unhinted/otf/NotoSerifKhmer/NotoSerifKhmer-Regular.otf'
                     },
-                    language: ['Sanskrit & Pali', 'Sanskrit', 'Pali'],
+                    language: ['Sanskrit & Pali', 'Pali'],
                     status: ['Living', 'Living: Major'],
                     invented: ['Derived: Brahmi', 'Derived: Pallava'],
                     region: ['South East Asian: Mainland', 'South East Asian']
@@ -1065,7 +950,7 @@ const ScriptMixin = {
                     wikicode: 'Khojki_script',
                     font: {
                         'name': 'Noto Sans Khojki',
-                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/phaseIII_only/unhinted/otf/NotoSansKhojki/NotoSansKhojki-Regular.otf'
+                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/unhinted/otf/NotoSansKhojki/NotoSansKhojki-Regular.otf'
                     },
                     language: ['Others'],
                     status: ['Living', 'Living: Minor'],
@@ -1084,7 +969,7 @@ const ScriptMixin = {
                         'name': 'Patimokkha',
                         'url': 'https://github.com/virtualvinodh/aksharamukha/blob/master/aksharamukha-front/src/statics/Patimokkha.otf'
                     },
-                    language: ['Sanskrit & Pali', 'Sanskrit', 'Pali'],
+                    language: ['Sanskrit & Pali', 'Pali'],
                     status: ['Living', 'Living: Minor'],
                     invented: ['Derived: Brahmi', 'Derived: Pallava'],
                     region: ['South East Asian: Mainland', 'South East Asian']
@@ -1097,7 +982,7 @@ const ScriptMixin = {
                     wikicode: 'Khudabadi_script',
                     font: {
                         'name': 'Nodo Sans Khudawadi',
-                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/phaseIII_only/unhinted/otf/NotoSansKhudawadi/NotoSansKhudawadi-Regular.otf'
+                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/unhinted/otf/NotoSansKhudawadi/NotoSansKhudawadi-Regular.otf'
                     },
                     language: ['Only Pali', 'Pali'],
                     status: ['Extinct', 'Extinct: Pre-Modern'],
@@ -1124,8 +1009,8 @@ const ScriptMixin = {
                     sscode: '',
                     ssdesc: '',
                     font: {
-                        'name': 'Lanexang Mon4',
-                        'url': 'https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha/aksharamukha-front/src/statics/Lanexang_Mon4.otf'
+                        'name': 'Lao Pali (Alpha)',
+                        'url': 'https://github.com/virtualvinodh/aksharamukha/blob/master/aksharamukha-front/src/statics/LaoPaliAlpha-Extralight.otf'
                     },
                     language: ['Only Pali', 'Pali'],
                     status: ['Living', 'Living: Minor'],
@@ -1172,9 +1057,9 @@ const ScriptMixin = {
                     wikicode: 'Malayalam_script',
                     font: {
                         'name': 'Noto Sans Malayalam',
-                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/phaseIII_only/unhinted/otf/NotoSansMalayalam/NotoSansMalayalam-Regular.otf'
+                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/unhinted/otf/NotoSansMalayalam/NotoSansMalayalam-Regular.otf'
                     },
-                    language: ['Sanskrit & Pali', 'Sanskrit', 'Pali'],
+                    language: ['Sanskrit & Pali', 'Pali'],
                     status: ['Living', 'Living: Major'],
                     invented: ['Derived: Brahmi', 'Derived: Pallava'],
                     region: ['South Indic', 'Indic']
@@ -1187,7 +1072,7 @@ const ScriptMixin = {
                     wikicode: 'Mahajani',
                     font: {
                         'name': 'Noto Sans Mahajani',
-                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/phaseIII_only/unhinted/otf/NotoSansMahajani/NotoSansMahajani-Regular.otf'
+                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/unhinted/otf/NotoSansMahajani/NotoSansMahajani-Regular.otf'
                     },
                     language: ['Others'],
                     status: ['Extinct', 'Extinct: Pre-Modern'],
@@ -1202,7 +1087,7 @@ const ScriptMixin = {
                     wikicode: 'Zhang-Zhung_language#Scripts',
                     font: {
                         'name': 'Noto Sans Marchen',
-                        'url': 'https://github.com/googlefonts/noto-fonts/tree/master/phaseIII_only/unhinted/otf/NotoSansMarchen'
+                        'url': 'https://github.com/googlefonts/noto-fonts/tree/master/unhinted/otf/NotoSansMarchen'
                     },
                     language: ['Others'],
                     status: ['Extinct', 'Extinct: Medieval'],
@@ -1219,7 +1104,7 @@ const ScriptMixin = {
                         'name': 'Noto Sans Meetei Mayek',
                         'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/unhinted/NotoSansMeeteiMayek-Regular.ttf'
                     },
-                    language: ['Sanskrit & Pali', 'Sanskrit', 'Pali'],
+                    language: ['Only Pali'],
                     status: ['Living', 'Living: Minor'],
                     invented: ['Derived: Brahmi'],
                     region: ['East Indic', 'Indic']
@@ -1232,9 +1117,9 @@ const ScriptMixin = {
                     wikicode: 'Modi_script',
                     font: {
                         'name': 'Modi',
-                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/phaseIII_only/unhinted/otf/NotoSansModi/NotoSansModi-Regular.otf'
+                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/unhinted/otf/NotoSansModi/NotoSansModi-Regular.otf'
                     },
-                    language: ['Sanskrit & Pali', 'Sanskrit', 'Pali'],
+                    language: ['Sanskrit & Pali', 'Pali'],
                     status: ['Extinct', 'Extinct: Pre-Modern'],
                     invented: ['Derived: Brahmi'],
                     region: ['North Indic', 'Indic']
@@ -1250,27 +1135,10 @@ const ScriptMixin = {
                         'name': '',
                         'url': ''
                     },
-                    language: ['Sanskrit & Pali', 'Sanskrit', 'Pali'],
+                    language: ['Sanskrit & Pali', 'Pali'],
                     status: ['Living', 'Living: Minor'],
                     invented: ['Derived: Brahmi', 'Derived: Pallava'],
                     region: ['South East Asian: Mainland', 'South East Asian']
-                }, {
-                    label: 'Mongolian (Ali Gali)',
-                    value: 'Mongolian',
-                    sscode: '',
-                    ssdesc: '',
-                    miscsrc: '(from <a href="https://en.wikipedia.org/wiki/Galik_alphabet">Wikipedia</a>)',
-                    miscdesc: 'Mongolian (Ali Gali) is an extension to the traditional Mongolian script. It was created in 1587 by the translator and scholar Ayuush Güüsh, inspired by the third Dalai Lama, Sonam Gyatso. He added extra characters for transcribing Tibetan and Sanskrit terms when translating religious texts, and later also from Chinese. ',
-                    omnicode: 'galik',
-                    wikicode: 'Galik_alphabet',
-                    font: {
-                        'name': 'MQG8F02',
-                        'url': 'https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha/aksharamukha-front/src/statics/MQG8F02.ttf'
-                    },
-                    language: ['Sanskrit & Pali', 'Sanskrit', 'Pali'],
-                    status: ['Extinct', 'Extinct: Medieval'],
-                    invented: ['Derived: Aramaic'],
-                    region: ['Central Asian']
                 }, {
                     label: 'Mro',
                     value: 'Mro',
@@ -1280,7 +1148,7 @@ const ScriptMixin = {
                     wikicode: 'Mru_language#Script',
                     font: {
                         'name': 'Noto Sans Mro',
-                        'url': 'https://github.com/googlefonts/noto-fonts/tree/master/phaseIII_only/unhinted/otf/NotoSansMro'
+                        'url': 'https://github.com/googlefonts/noto-fonts/tree/master/unhinted/otf/NotoSansMro'
                     },
                     language: ['Others'],
                     status: ['Living', 'Living: Minor'],
@@ -1295,7 +1163,7 @@ const ScriptMixin = {
                     wikicode: 'Multani_alphabet',
                     font: {
                         'name': 'Multani',
-                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/phaseIII_only/unhinted/otf/NotoSansMultani/NotoSansMultani-Regular.otf'
+                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/unhinted/otf/NotoSansMultani/NotoSansMultani-Regular.otf'
                     },
                     language: ['Others'],
                     status: ['Extinct', 'Extinct: Pre-Modern'],
@@ -1310,9 +1178,9 @@ const ScriptMixin = {
                     wikicode: 'Prachalit_Nepal_alphabet',
                     font: {
                         'name': 'Noto Sans Newa',
-                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/phaseIII_only/unhinted/otf/NotoSansNewa/NotoSansNewa-Regular.otf'
+                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/unhinted/otf/NotoSansNewa/NotoSansNewa-Regular.otf'
                     },
-                    language: ['Sanskrit & Pali', 'Sanskrit', 'Pali'],
+                    language: ['Sanskrit & Pali', 'Pali'],
                     status: ['Living', 'Living: Minor'],
                     invented: ['Derived: Brahmi'],
                     region: ['North Indic', 'Indic']
@@ -1325,7 +1193,7 @@ const ScriptMixin = {
                     wikicode: 'Old_Persian_cuneiform',
                     font: {
                         'name': 'Noto Sans Old Persian',
-                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/phaseIII_only/unhinted/otf/NotoSansOldPersian/NotoSansOldPersian-Regular.otf'
+                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/unhinted/otf/NotoSansOldPersian/NotoSansOldPersian-Regular.otf'
                     },
                     language: ['Others'],
                     status: ['Extinct', 'Extinct: Ancient'],
@@ -1342,7 +1210,7 @@ const ScriptMixin = {
                         'name': '',
                         'url': ''
                     },
-                    language: ['Sanskrit & Pali', 'Sanskrit', 'Pali'],
+                    language: ['Sanskrit & Pali', 'Pali'],
                     status: ['Living', 'Living: Major'],
                     invented: ['Derived: Brahmi'],
                     region: ['East Indic', 'Indic']
@@ -1357,7 +1225,7 @@ const ScriptMixin = {
                         'name': '',
                         'url': ''
                     },
-                    language: ['Sanskrit & Pali', 'Sanskrit', 'Pali'],
+                    language: ['Sanskrit & Pali', 'Pali'],
                     status: ['Extinct', 'Extinct: Medieval'],
                     invented: ['Derived: Brahmi'],
                     region: ['Central Asian']
@@ -1387,7 +1255,7 @@ const ScriptMixin = {
                         'name': 'Ranjana Unicode',
                         'url': 'https://github.com/virtualvinodh/aksharamukha/blob/master/aksharamukha-front/src/statics/RanjanaUNICODE1.0.TTF'
                     },
-                    language: ['Sanskrit & Pali', 'Sanskrit', 'Pali'],
+                    language: ['Sanskrit & Pali', 'Pali'],
                     status: ['Living', 'Living: Minor'],
                     invented: ['Derived: Brahmi'],
                     region: ['North Indic', 'Indic']
@@ -1400,7 +1268,7 @@ const ScriptMixin = {
                     wikicode: 'Rejang_script',
                     font: {
                         'name': 'Noto Sans Rejang',
-                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/phaseIII_only/unhinted/otf/NotoSansRejang/NotoSansRejang-Regular.otf'
+                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/unhinted/otf/NotoSansRejang/NotoSansRejang-Regular.otf'
                     },
                     language: ['Others'],
                     status: ['Living', 'Living: Minor'],
@@ -1415,7 +1283,7 @@ const ScriptMixin = {
                     wikicode: 'Hanifi_Rohingya_script',
                     font: {
                         'name': 'Noto Sans HanifiRohingya',
-                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/phaseIII_only/unhinted/otf/NotoSansHanifiRohingya/NotoSansHanifiRohingya-Regular.otf'
+                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/unhinted/otf/NotoSansHanifiRohingya/NotoSansHanifiRohingya-Regular.otf'
                     },
                     language: ['Others'],
                     status: ['Living', 'Living: Minor'],
@@ -1430,7 +1298,7 @@ const ScriptMixin = {
                     wikicode: 'Ol_Chiki_script',
                     font: {
                         'name': 'Noto Sans Old Chiki',
-                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/phaseIII_only/unhinted/otf/NotoSansOlChiki/NotoSansOlChiki-Regular.otf'
+                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/unhinted/otf/NotoSansOlChiki/NotoSansOlChiki-Regular.otf'
                     },
                     language: ['Only Pali', 'Pali'],
                     status: ['Living', 'Living: Minor'],
@@ -1445,9 +1313,9 @@ const ScriptMixin = {
                     wikicode: 'Saurashtra_alphabet',
                     font: {
                         'name': 'Noto Sans Saurashtra',
-                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/phaseIII_only/unhinted/otf/NotoSansSaurashtra/NotoSansSaurashtra-Regular.otf'
+                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/unhinted/otf/NotoSansSaurashtra/NotoSansSaurashtra-Regular.otf'
                     },
-                    language: ['Sanskrit & Pali', 'Sanskrit', 'Pali'],
+                    language: ['Sanskrit & Pali', 'Pali'],
                     status: ['Living', 'Living: Minor'],
                     invented: ['Invented'],
                     region: ['South Indic', 'Indic']
@@ -1460,9 +1328,9 @@ const ScriptMixin = {
                     wikicode: 'Siddhaṃ_script',
                     font: {
                         'name': 'Noto Sans Siddham',
-                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/phaseIII_only/unhinted/otf/NotoSansSiddham/NotoSansSiddham-Regular.otf'
+                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/unhinted/otf/NotoSansSiddham/NotoSansSiddham-Regular.otf'
                     },
-                    language: ['Sanskrit & Pali', 'Sanskrit', 'Pali'],
+                    language: ['Sanskrit & Pali', 'Pali'],
                     status: ['Living', 'Living: Minor'],
                     invented: ['Derived: Brahmi'],
                     region: ['East Asian']
@@ -1477,7 +1345,7 @@ const ScriptMixin = {
                         'name': '',
                         'url': ''
                     },
-                    language: ['Sanskrit & Pali', 'Sanskrit', 'Pali'],
+                    language: ['Sanskrit & Pali', 'Pali'],
                     status: ['Living', 'Living: Minor'],
                     invented: ['Derived: Brahmi', 'Derived: Pallava'],
                     region: ['South East Asian: Mainland', 'South East Asian'],
@@ -1492,9 +1360,9 @@ const ScriptMixin = {
                     wikicode: 'Sharada_script',
                     font: {
                         'name': 'Noto Sans Sharada',
-                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/phaseIII_only/unhinted/otf/NotoSansSharada/NotoSansSharada-Regular.otf'
+                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/unhinted/otf/NotoSansSharada/NotoSansSharada-Regular.otf'
                     },
-                    language: ['Sanskrit & Pali', 'Sanskrit', 'Pali'],
+                    language: ['Sanskrit & Pali', 'Pali'],
                     status: ['Living', 'Living: Minor'],
                     invented: ['Derived: Brahmi'],
                     region: ['North Indic', 'Indic']
@@ -1512,9 +1380,9 @@ const ScriptMixin = {
                     wikicode: 'Sinhalese_script',
                     font: {
                         'name': 'Noto Sans Sinhala',
-                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/phaseIII_only/unhinted/otf/NotoSansSinhala/NotoSansSinhala-Regular.otf'
+                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/unhinted/otf/NotoSansSinhala/NotoSansSinhala-Regular.otf'
                     },
-                    language: ['Sanskrit & Pali', 'Sanskrit', 'Pali'],
+                    language: ['Sanskrit & Pali', 'Pali'],
                     status: ['Living', 'Living: Major'],
                     invented: ['Derived: Brahmi', 'Derived: Pallava'],
                     region: ['South Indic', 'Indic']
@@ -1527,7 +1395,7 @@ const ScriptMixin = {
                     wikicode: 'Sorang_Sompeng_alphabet',
                     font: {
                         'name': 'Noto Sans SoraSompeng',
-                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/phaseIII_only/unhinted/otf/NotoSansSoraSompeng/NotoSansSoraSompeng-Regular.otf'
+                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/unhinted/otf/NotoSansSoraSompeng/NotoSansSoraSompeng-Regular.otf'
                     },
                     language: ['Others'],
                     status: ['Living', 'Living: Minor'],
@@ -1542,9 +1410,9 @@ const ScriptMixin = {
                     wikicode: 'Soyombo_script',
                     font: {
                         'name': 'Noto Sans Soyombo',
-                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/phaseIII_only/unhinted/otf/NotoSansSoyombo/NotoSansSoyombo-Regular.otf'
+                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/unhinted/otf/NotoSansSoyombo/NotoSansSoyombo-Regular.otf'
                     },
-                    language: ['Sanskrit & Pali', 'Sanskrit', 'Pali'],
+                    language: ['Sanskrit & Pali', 'Pali'],
                     status: ['Extinct', 'Extinct: Medieval'],
                     invented: ['Derived: Brahmi'],
                     region: ['Central Asian']
@@ -1572,7 +1440,7 @@ const ScriptMixin = {
                     wikicode: 'Sylheti_Nagari',
                     font: {
                         'name': 'Noto Sans SylotiNagri',
-                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/phaseIII_only/unhinted/otf/NotoSansSylotiNagri/NotoSansSylotiNagri-Regular.otf'
+                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/unhinted/otf/NotoSansSylotiNagri/NotoSansSylotiNagri-Regular.otf'
                     },
                     language: ['Others'],
                     status: ['Living', 'Living: Minor'],
@@ -1605,8 +1473,8 @@ const ScriptMixin = {
                         'url': 'Noto Sans Tagalog'
                     },
                     language: ['Others'],
-                    status: ['Living', 'Living: Minor'],
-                    invented: ['Derived: Brahmi', 'Derived: Pallava'],
+                    status: ['Living', 'Living: Minor', 'Derived: Pallava'],
+                    invented: ['Derived: Brahmi'],
                     region: ['South East Asian: Insular', 'South East Asian']
                 }, {
                     label: 'Tai Laing',
@@ -1637,7 +1505,7 @@ const ScriptMixin = {
                         'name': 'Pali Tilok',
                         'url': 'https://github.com/virtualvinodh/aksharamukha/blob/master/aksharamukha-front/src/statics/Pali_Tilok.ttf'
                     },
-                    language: ['Sanskrit & Pali', 'Sanskrit', 'Pali'],
+                    language: ['Sanskrit & Pali', 'Pali'],
                     status: ['Living', 'Living: Minor'],
                     invented: ['Derived: Brahmi', 'Derived: Pallava'],
                     region: ['South East Asian: Mainland', 'South East Asian']
@@ -1650,7 +1518,7 @@ const ScriptMixin = {
                     wikicode: 'Takri_alphabet',
                     font: {
                         'name': 'Noto Sans Takri',
-                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/phaseIII_only/unhinted/otf/NotoSansTakri/NotoSansTakri-Regular.otf'
+                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/unhinted/otf/NotoSansTakri/NotoSansTakri-Regular.otf'
                     },
                     language: ['Only Pali', 'Pali'],
                     status: ['Extinct', 'Extinct: Pre-Modern'],
@@ -1665,9 +1533,9 @@ const ScriptMixin = {
                     wikicode: 'Tamil_script',
                     font: {
                         'name': 'Noto Sans Tamil',
-                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/phaseIII_only/unhinted/otf/NotoSansTamil/NotoSansTamil-Regular.otf'
+                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/unhinted/otf/NotoSansTamil/NotoSansTamil-Regular.otf'
                     },
-                    language: ['Sanskrit & Pali', 'Sanskrit', 'Pali'],
+                    language: ['Sanskrit & Pali', 'Pali'],
                     status: ['Living', 'Living: Major'],
                     invented: ['Derived: Brahmi', 'Derived: Pallava'],
                     region: ['South Indic', 'Indic']
@@ -1681,10 +1549,10 @@ const ScriptMixin = {
                     omnicode: '',
                     wikicode: '',
                     font: {
-                        'name': 'Agastya Extended Tamil',
-                        'url': 'https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha/aksharamukha-front/src/statics/AgastyaExtendedTamil.otf'
+                        'name': 'Shankara Extended Tamil',
+                        'url': 'https://github.com/virtualvinodh/aksharamukha/blob/master/aksharamukha-front/src/statics/ShankaraExtendedTamil.otf'
                     },
-                    language: ['Sanskrit & Pali', 'Sanskrit', 'Pali'],
+                    language: ['Sanskrit & Pali', 'Pali'],
                     status: ['Living', 'Living: Minor'],
                     invented: ['Derived: Brahmi', 'Derived: Pallava'],
                     region: ['South Indic', 'Indic']
@@ -1712,10 +1580,10 @@ const ScriptMixin = {
                     omnicode: 'telugu',
                     wikicode: 'Telugu_script',
                     font: {
-                        'name': 'Noto Sans Telugu',
-                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/phaseIII_only/unhinted/otf/NotoSansTelugu/NotoSansTelugu-Regular.otf'
+                        'name': 'Lohit Telugu',
+                        'url': 'https://pagure.io/lohit/tree/master'
                     },
-                    language: ['Sanskrit & Pali', 'Sanskrit', 'Pali'],
+                    language: ['Sanskrit & Pali', 'Pali'],
                     status: ['Living', 'Living: Major'],
                     invented: ['Derived: Brahmi'],
                     region: ['South Indic', 'Indic']
@@ -1751,7 +1619,7 @@ const ScriptMixin = {
                         'name': '',
                         'url': ''
                     },
-                    language: ['Sanskrit & Pali', 'Sanskrit', 'Pali'],
+                    language: ['Sanskrit & Pali', 'Pali'],
                     status: ['Living', 'Living: Major'],
                     invented: ['Derived: Brahmi', 'Derived: Pallava'],
                     region: ['South East Asian: Mainland', 'South East Asian']
@@ -1766,7 +1634,7 @@ const ScriptMixin = {
                         'name': '',
                         'url': ''
                     },
-                    language: ['Sanskrit & Pali', 'Sanskrit', 'Pali'],
+                    language: ['Sanskrit & Pali', 'Pali'],
                     status: ['Living', 'Living: Major'],
                     invented: ['Derived: Brahmi'],
                     region: ['Central Asian']
@@ -1781,7 +1649,7 @@ const ScriptMixin = {
                         'name': 'Mithila Uni',
                         'url': 'http://vedicastrology.wikidot.com/local--files/mithilakshara-font/MithilaUni.ttf'
                     },
-                    language: ['Sanskrit & Pali', 'Sanskrit', 'Pali'],
+                    language: ['Sanskrit & Pali', 'Pali'],
                     status: ['Living', 'Living: Minor'],
                     invented: ['Derived: Brahmi'],
                     region: ['East Indic', 'Indic']
@@ -1795,9 +1663,9 @@ const ScriptMixin = {
                     omnicode: 'urdu',
                     font: {
                         'name': 'Noto Sans Nastaliq Urdu',
-                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/phaseIII_only/unhinted/otf/NotoNastaliqUrdu/NotoNastaliqUrdu-Regular.otf'
+                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/unhinted/otf/NotoNastaliqUrdu/NotoNastaliqUrdu-Regular.otf'
                     },
-                    language: ['Sanskrit & Pali', 'Sanskrit', 'Pali'],
+                    language: ['Sanskrit & Pali', 'Pali'],
                     status: ['Living', 'Living: Major'],
                     invented: ['Derived: Perso-Arabic'],
                     region: ['North Indic', 'Indic']
@@ -1824,7 +1692,7 @@ const ScriptMixin = {
                     wikicode: 'Wancho_script',
                     font: {
                         'name': 'Noto Sans Wancho',
-                        'url': 'https://github.com/googlefonts/noto-fonts/tree/master/phaseIII_only/unhinted/otf/NotoSansWancho'
+                        'url': 'https://github.com/googlefonts/noto-fonts/tree/master/unhinted/otf/NotoSansWancho'
                     },
                     language: ['Others'],
                     status: ['Living', 'Living: Minor'],
@@ -1839,7 +1707,7 @@ const ScriptMixin = {
                     wikicode: 'Warang_Citi',
                     font: {
                         'name': 'Noto Sans WarangCiti',
-                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/phaseIII_only/unhinted/otf/NotoSansWarangCiti/NotoSansWarangCiti-Regular.otf'
+                        'url': 'https://cdn.jsdelivr.net/gh/googlei18n/noto-fonts/unhinted/otf/NotoSansWarangCiti/NotoSansWarangCiti-Regular.otf'
                     },
                     language: ['Others'],
                     status: ['Living', 'Living: Minor'],
@@ -1853,10 +1721,10 @@ const ScriptMixin = {
                     wikicode: 'Horizontal_square_script',
                     omnicode: 'mhss',
                     font: {
-                        'name': 'Noto Sans Zanabazar Square',
-                        'url': 'https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha/aksharamukha-front/src/statics/NotoSansZanabazarSquare-Regular.otf'
+                        'name': 'Babelstone Zanabazar',
+                        'url': 'https://www.babelstone.co.uk/Fonts/Zanabazar.html'
                     },
-                    language: ['Sanskrit & Pali', 'Sanskrit', 'Pali'],
+                    language: ['Sanskrit & Pali', 'Pali'],
                     status: ['Extinct', 'Extinct: Medieval'],
                     invented: ['Derived: Brahmi'],
                     region: ['Central Asian']
@@ -1898,17 +1766,11 @@ const ScriptMixin = {
                 label: 'Roman (ISO 15919)',
                 value: 'ISO'
             }, {
-                label: 'Roman (SLP1)',
-                value: 'SLP1'
-            }, {
                 label: 'Roman (Titus)',
                 value: 'Titus'
             }, {
                 label: 'Roman (Velthuis)',
                 value: 'Velthuis'
-            }, {
-                label: 'Roman (WX)',
-                value: 'WX'
             }, {
                 language: ['Others'],
                 status: ['Living', 'Living: Major'],
@@ -1949,12 +1811,6 @@ const ScriptMixin = {
                 label: 'Titus',
                 value: 'Titus'
             }, {
-                label: 'SLP1',
-                value: 'SLP1'
-            }, {
-                label: 'WX',
-                value: 'WX'
-            }, {
                 label: 'Roman (Readable)',
                 value: 'RomanReadable'
             }],
@@ -1975,33 +1831,10 @@ const ScriptMixin = {
             RegionExpand: ['Iran', 'India', 'Sri Lanka', 'Burmese', 'Philippines', 'Indonesia', 'Japan'],
             Status: ['Living', 'Extinct'],
             StatusExpand: ['Extinct', 'Living: Major', 'Living: Minor'],
-            indicSubset: ['PhagsPa', 'TaiLaing', 'Mon', 'Ahom', 'KhamtiShan', 'Shan', 'Khmer', 'Burmese', 'Lao', 'Thai', 'Balinese', 'Javanese', 'Tibetan', 'LaoPali', 'TaiTham', 'Cham', 'Lepcha', 'Ahom', 'ZanabazarSquare'],
-            tagsUsageM: ['Living', 'Extinct'],
-            tagsUsageS: ['Living: Minor', 'Living: Major', 'Extinct: Ancient', 'Extinct: Medieval', 'Extinct: Pre-Modern'],
-            tagsLanguageM: ['Sanskrit', 'Pali', 'Others'],
-            tagsRegionM1: ['Indic'],
-            tagsRegionS1: ['Pan-Indic', 'East Indic', 'West Indic', 'North Indic', 'South Indic'],
-            tagsRegionM2: ['East Asian', 'West Asian', 'Central Asian', 'South Asian: Other', 'South East Asian'],
-            tagsRegionS2: ['South East Asian: Mainland', 'South East Asian: Insular'],
-            tagsDerivationM: ['Derived: Brahmi', 'Derived: Pallava', 'Derived: Aramaic', 'Derived: Perso-Arabic', 'Derived: Cuneiform', 'Invented']
+            indicSubset: ['Shan', 'Khmer', 'Burmese', 'Lao', 'Thai', 'Balinese', 'Javanese', 'Tibetan', 'LaoPali', 'TaiTham', 'Cham', 'Lepcha', 'Ahom', 'ZanabazarSquare']
         }
     },
     computed: {
-        tagsUsage: function() {
-            return this.tagsUsageM.concat(this.tagsUsageS)
-        },
-        tagsRegion: function() {
-            return this.tagsRegionM1.concat(this.tagsRegionS1, this.tagsRegionM2, this.tagsRegionS2)
-        },
-        tagsLanguage: function() {
-            return this.tagsLanguageM
-        },
-        tagsDerivation: function() {
-            return this.tagsDerivationM
-        },
-        tagsAll: function() {
-            return this.tagsUsage.concat(this.tagsRegion, this.tagsLanguage, this.tagsDerivation)
-        },
         scriptsOutput: function() {
             return this.scripts.filter(function(el) {
                 return el.value !== 'GranthaGrantamil'
@@ -2030,16 +1863,9 @@ const ScriptMixin = {
         }
     },
     methods: {
-        tagsGet: function(script) {
-            if (script !== '') {
-                return script.language.concat(script.invented, script.status, script.region)
-            } else {
-                return []
-            }
-        },
         downloadHTML: function(content) {
-            var warning = '<span class="printhide"><small>Proper display of the text below may depend on webfonts, which in turn require being connected to the internet</small><br/> </span> <br/>'
-            var doc = '<html><head><meta charset="utf-8"/><link rel="stylesheet" type="text/css" href="./fonts.css"></head><body>' + warning + content + '</span></body></html>'
+            var warning = '<span class="printhide">Proper display of the some of the text below may depend on webfonts, which in turn require being connected to the internet<br/> </span> <br/>'
+            var doc = '<html><head><meta charset="utf-8"/><link rel="stylesheet" type="text/css" href="http://www.virtualvinodh.com/aksharamkh/fonts.css"></head><body>' + warning + content + '</span></body></html>'
             var blob = ''
             const e = document.createEvent('MouseEvents')
             const a = document.createElement('a')
@@ -2152,7 +1978,7 @@ const ScriptMixin = {
             }
             return desc
         },
-        getOutputClass: function(tgt, postOptions = [], outputText = '') {
+        getOutputClass: function(tgt, postOptions = []) {
             if (postOptions.includes('siddhamap') && tgt === 'Siddham') {
                 return 'siddhamap'
             } else if (postOptions.includes('tradOrtho') && tgt === 'Malayalam') {
@@ -2163,6 +1989,8 @@ const ScriptMixin = {
                 return 'limbudeva'
             } else if (postOptions.includes('egrantamil') && tgt === 'Grantha') {
                 return 'granthagrantamil'
+            } else if (postOptions.includes('granthaserif') && tgt === 'Grantha') {
+                return 'granthaserif'
             } else if (postOptions.includes('nepaldevafont') && tgt === 'Newa') {
                 return 'nepaldevafont'
             } else if (postOptions.includes('ranjanalantsa') && tgt === 'Ranjana') {
@@ -2177,30 +2005,6 @@ const ScriptMixin = {
                 return 'taithamlao'
             } else if (postOptions.includes('TaiKuen') && tgt === 'TaiTham') {
                 return 'taikuen'
-            } else if (postOptions.includes('granthafinal') && postOptions.includes('granthaserif') && tgt === 'Grantha') {
-                return 'granthaseriflig'
-            } else if (postOptions.includes('granthaserif') && tgt === 'Grantha') {
-                return 'granthaserif'
-            } else if (postOptions.includes('granthafinal') && tgt === 'Grantha') {
-                return 'granthalig'
-            } else if (postOptions.includes('PhagsPaTib') && tgt === 'PhagsPa') {
-                return 'phagspatib'
-            } else if (postOptions.includes('PhagsPaSeal') && tgt === 'PhagsPa') {
-                return 'phagspaseal'
-            } else if (postOptions.includes('TeluguTamilZha') && tgt === 'Telugu') {
-                return 'teluguzha'
-            } else if (postOptions.includes('TeluguTamilRra') && tgt === 'Telugu') {
-                return 'teluguzha'
-            } else if (postOptions.includes('ThaiNativeConsonants') && tgt === 'Thai') {
-                return 'thainative'
-            } else if (tgt === 'Oriya' && (String(outputText).includes('॒') || String(outputText).includes('᳚') || String(outputText).includes('॑'))) {
-                return 'oriyavedic'
-            } else if (tgt === 'Bengali' && (String(outputText).includes('॒') || String(outputText).includes('᳚') || String(outputText).includes('॑'))) {
-                return 'bengalivedic'
-            } else if (tgt === 'Gujarati' && (String(outputText).includes('॒') || String(outputText).includes('᳚') || String(outputText).includes('॑'))) {
-                return 'gujarativedic'
-            } else if (tgt === 'Gurmukhi' && (String(outputText).includes('॒') || String(outputText).includes('᳚') || String(outputText).includes('॑'))) {
-                return 'gurmukhivedic'
             } else {
                 return tgt.toLowerCase()
             }
@@ -2214,8 +2018,6 @@ const ScriptMixin = {
                 return 'limbudeva'
             } else if (preOptions.includes('TaiThamLao') && src === 'TaiTham') {
                 return 'taithamlao'
-            } else if (preOptions.includes('ThaiPhonetic') && src === 'Thai') {
-                return 'thainative'
             } else if (preOptions.includes('TaiKuen') && src === 'TaiTham') {
                 return 'taikuen'
             } else {
@@ -2303,7 +2105,7 @@ const ScriptMixin = {
 // Website: http://www.virtualvinodh.com
 // Plugin: Web plugin for http://www.aksharamukha.appspot.com
 // Global Data
-var apiURL = "https://aksharamukha-plugin.appspot.com/api/plugin"
+var apiURL = "https://aksharamukha.appspot.com/api/plugin"
 var navbarOld = ''
 var origText = [];
 var nodesListAll = []
@@ -2314,7 +2116,6 @@ var postOptionsList = []
 var preOptionsList = []
 var postOptionsListOld = []
 var preservePrevious = false
-var changeURLParams = false
 var optionsHide = true
 var scripts = ScriptMixin.data().scriptsIndic;
 var postOptions = ScriptMixin.data().postOptionsGroup;
@@ -2323,7 +2124,6 @@ scriptList = []
 ScriptMixin.data().scriptsIndic.forEach(function(e) {
     scriptList.push(e.value)
 })
-scriptList.push('RussianCyrillic')
 scriptList.push('ISO')
 scriptList.push('IAST')
 scriptList.push('IASTPali')
@@ -2332,23 +2132,6 @@ scriptList.push('IPA')
 scriptList.push('Original')
 var myTags = document.getElementsByTagName("script");
 var src = myTags[myTags.length - 1].src;
-if (src.includes('changeurl')) {
-    changeURLParams = unescape(src).split("changeurl=")[1].split("&")[0] == '1';
-}
-if (src.includes('prelist')) {
-    var preList = unescape(src).split("prelist=")[1].split("&")[0];
-    console.log(preList)
-    if (preList === 'majorindic') {
-        scriptList = ['ISO', 'IAST', 'IPA', 'RomanReadable', 'RussianCyrillic', 'Assamese', 'Bengali', 'Devanagari', 'Grantha', 'Gujarati', 'Gurmukhi', 'Kannada', 'Malayalam', 'Oriya', 'Sharada', 'Tamil', 'TamilExtended', 'Telugu', 'Urdu']
-    } else if (preList == 'majorall') {
-        scriptList = ['ISO', 'IAST', 'IPA', 'RomanReadable', 'RussianCyrillic', 'Assamese', 'Bengali', 'Burmese', 'Devanagari', 'Grantha', 'Gujarati', 'Gurmukhi', 'Kannada', 'Khmer', 'Malayalam', 'Oriya', 'Sharada', 'Sinhala', 'Tamil', 'TamilExtended', 'Telugu', 'Thai', 'Tibetan', 'Urdu']
-    } else if (preList == 'sansktradall') {
-        scriptList = ['ISO', 'IAST', 'IPA', 'RomanReadable', 'RussianCyrillic', 'Assamese', 'Balinese', 'Bengali', 'Brahmi', 'Bhaikshuki', 'Burmese', 'Devanagari', 'Dogra', 'Grantha', 'GranthaPandya', 'Gujarati', 'Gurmukhi', 'Javanese', 'Kannada', 'Kharoshthi', 'KhomThai', 'Khmer', 'Malayalam', 'Mongolian', 'Newa', 'Oriya', 'PhagsPa', 'Ranjana', 'Saurashtra', 'Siddham', 'Sharada', 'Sinhala', 'Soyombo', 'TaiTham', 'Takri', 'Tamil', 'TamilExtended', 'Telugu', 'Thai', 'Tibetan', 'Tirhuta', 'Urdu', 'ZanabazarSquare']
-    } else if (preList == 'sanskall') {
-        scriptList = ['ISO', 'IAST', 'IPA', 'RomanReadable', 'RussianCyrillic', 'Ariyaka', 'Assamese', 'Balinese', 'Bengali', 'Brahmi', 'Bhaikshuki', 'Burmese', 'Chakma', 'Devanagari', 'Dogra', 'GunjalaGondi', 'MasaramGondi', 'Grantha', 'GranthaPandya', 'Gujarati', 'Gurmukhi', 'Javanese', 'Kaithi', 'Kannada', 'Kharoshthi', 'KhomThai', 'Khmer', 'Khudawadi', 'LaoPali', 'Malayalam', 'Mongolian', 'Modi', 'Newa', 'Oriya', 'PhagsPa', 'Ranjana', 'Santali', 'Saurashtra', 'Siddham', 'Sharada', 'Sinhala', 'Soyombo', 'TaiTham', 'Takri', 'Tamil', 'TamilExtended', 'Telugu', 'Thai', 'Tibetan', 'Tirhuta', 'Urdu', 'ZanabazarSquare']
-    }
-    scriptList.push('Original')
-}
 if (src.includes('scriptlist')) {
     scriptList = unescape(src).split("scriptlist=")[1].split("&")[0].split(',');
     scriptList.push('Original')
@@ -2366,8 +2149,8 @@ if (src.includes('preoptions')) {
     preOptionsURL = unescape(src).split("preoptions=")[1].split("&")[0].split(',');
 }
 async function translit(element, ind, source, targetOld, target) {
-    outputClassOld = ScriptMixin.methods.getOutputClass(targetOld, postOptionsListOld, JSON.stringify(nodesListAll[ind]))
-    outputClass = ScriptMixin.methods.getOutputClass(target, postOptionsList, JSON.stringify(nodesListAll[ind]))
+    outputClassOld = ScriptMixin.methods.getOutputClass(targetOld, postOptionsListOld)
+    outputClass = ScriptMixin.methods.getOutputClass(target, postOptionsList)
     if (target != 'Original') {
         textsTran = await transliterateReq(source, target, !preservePrevious, JSON.stringify(nodesListAll[ind]), postOptionsList, preOptionsList)
         var textsTranOrig = textsTran
@@ -2380,8 +2163,8 @@ async function translit(element, ind, source, targetOld, target) {
             }
             textsTran = JSON.parse(textsTran)
         } catch (e) {
-            //console.log(e)
-            //console.log(textsTranOrig)
+            console.log(e)
+            console.log(textsTranOrig)
             // console.log(typeof textsTran)
             textsTran = textsTran
         }
@@ -2415,7 +2198,6 @@ function transliterateReq(source, target, nativize, text, postOptions, preOption
             'text': text,
             'preOptions': preOptions
         });
-        //console.log(data)
         xhttp.send(data);
         // Setup our listener to process compeleted requests
         xhttp.onreadystatechange = function() {
@@ -2424,7 +2206,6 @@ function transliterateReq(source, target, nativize, text, postOptions, preOption
             // Process the response
             if (xhttp.status >= 200 && xhttp.status < 300) {
                 // If successful
-                //console.log(xhttp.responseText);
                 resolve(xhttp.responseText);
             } else {
                 // If failed
@@ -2441,14 +2222,14 @@ function optionsOutput(outputScript) {
     if (typeof postOptions[outputScript] !== 'undefined') {
         var checkbox = ''
         if (optionsHide) {
-            checkbox = '<span id="aksharamukha-options"><div id="options" class="aksharamukha-hidedown">';
+            checkbox = '<br/><span id="options" class="aksharamukha-hidedown">';
         } else {
-            checkbox = '<span id="aksharamukha-options"><div id="options" class="aksharamukha-showup">';
+            checkbox = '<br/><span id="options" class="aksharamukha-showup">';
         }
         postOptions[outputScript].forEach(function(option) {
-            checkbox += '<input type="checkbox" name="aksharamukha-optionpost" value="' + option.value + '"><small>' + option.label + '</small><br>';
+            checkbox += '<input type="checkbox" name="aksharamukha-optionpost" value="' + option.value + '">' + option.label + '<br>';
         })
-        return checkbox + '</div></span>'
+        return checkbox + '</span>'
     } else {
         return ''
     }
@@ -2489,68 +2270,44 @@ function appendTool() {
     if (scriptList.includes("IPA")) {
         selectMid += '<option value="IPA">IPA</option>'
     }
-    if (scriptList.includes("RussianCyrillic")) {
-        selectMid += '<option value="RussianCyrillic">Cyrillic (Russian)</option>'
-    }
-    //var preservebutton = '<input type="checkbox" name="preserve" id="aksharamukha-preserve"/> Preserve source </input>'
+    var preservebutton = '<input type="checkbox" name="preserve" id="aksharamukha-preserve"/> Preserve source </input>'
     scripts.forEach(function(script) {
         if (scriptList.includes(script.value)) {
             selectMid += '<option value="' + script.value + '">' + script.label + "</option>";
         }
     });
-    var widthNavBar = '';
     document.body.insertAdjacentHTML('afterbegin', `
-      <div id="aksharamukha-navbar" class="sticky aksharamukha-printhide">
+      <div id="aksharamukha-navbar" class="sticky">
       <div class="aksharamukha-logosec">
-          <span class="aksharamukha-name"><small>Select script</small>&nbsp;&nbsp;&nbsp;<button id="aksharamukha-pluginhidebutton"><small>Hide</small></button>
+      <div class="logo-aksharamukha"/>
+        <a href="http://aksharamukha.appspot.com">
+          <img src="https://raw.githubusercontent.com/virtualvinodh/aksharamukha/master/aksharamukha-front/src/statics/icons/favicon-32x32.png" width="20px" >
+        </a> <span class="aksharamukha-name">Aksharamukha</span>
       </div>
-      <div id="aksharamukha-minlogo" style="text-align: center;">
-      <small><a href="http://aksharamukha.appspot.com" class="aksharamukha-hyperlink" target="_blank"><img src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin/icon.png" width="20px"/></a>&nbsp;<sup><span id="message" style="display:none;">Displaying in<br/><span id="scriptName">Telugu</span></span></sup><sup><button id="aksharamukha-minlogobutton"><small>Change <br/>script</small></button></sup>
       </div>
-` + selectInit + selectMid + selectEnd + `
+` + selectInit + selectMid + selectEnd + preservebutton + `
   `);
-    var newDivLogo = document.createElement("div")
-    newDivLogo.id = "aksharamukha-branding1"
-    var navbar = document.getElementById('aksharamukha-navbar')
-    navbar.appendChild(newDivLogo)
-    document.getElementById('aksharamukha-branding1').innerHTML = '<a href="http://aksharamukha.appspot.com" class="aksharamukha-hyperlink" target="_blank"><img src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin/icon.png" width="15px"/> <small><sup>Aksharamukha</sup></small></a>'
     var newStyle = document.createElement('style');
     newStyle.appendChild(document.createTextNode(`
-    #aksharamukha-navbar, #aksharamukha-navbar * {
-      box-sizing: border-box;
-    }
-
     .logo-aksharamukha {
       padding-right:5px;
     }
 
-    #aksharamukha-minlogo {
-      display: none;
-    }
-
     .aksharamukha-logosec {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-      margin-bottom: 8px;
+      margin-bottom: 5px;
     }
 
     .aksharamukha-selection {
-      display: block;
-      margin-top: 6px;
+      margin-top: 5px;
     }
 
     .aksharamukha-name {
-      font-style: normal;
-      font-weight: 600;
-      letter-spacing: .01em;
-      color: #1f2430;
+      font-style: italic;
     }
 
     #aksharamukha-more {
-      margin-top:8px;
-      margin-bottom: 0px;
+      margin-top:2px;
+      margin-bottom: 5px;
     }
 
     .aksharamukha-hidedown {
@@ -2558,156 +2315,34 @@ function appendTool() {
     }
 
     .aksharamukha-showup {
-      display: block;
+      display: all;
     }
 
     #aksharamukhaselect {
-      font-family: inherit;
-      width: 100%;
-      min-width: 160px;
-      padding: 6px 28px 6px 10px;
-      font-size: 13px;
-      color: #1f2430;
-      background-color: #fff;
-      border: 1px solid #d7dae1;
-      border-radius: 7px;
-      appearance: none;
-      -webkit-appearance: none;
-      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23666f80' stroke-width='2'><path d='M5 8l5 5 5-5'/></svg>");
-      background-repeat: no-repeat;
-      background-position: right 8px center;
-      background-size: 12px;
-      cursor: pointer;
-      transition: border-color .15s ease, box-shadow .15s ease;
-    }
-
-    #aksharamukhaselect:hover {
-      border-color: #b9bfcc;
-    }
-
-    #aksharamukhaselect:focus {
-      outline: none;
-      border-color: #6c63ff;
-      box-shadow: 0 0 0 3px rgba(108, 99, 255, .15);
+      font-family: calibri;
+      width:140px;
     }
 
     #aksharamukha-preserve {
       margin-top:10px;
       margin-bottom: 10px;
-      accent-color: #6c63ff;
-      cursor: pointer;
-    }
-
-    #options input[type="checkbox"] {
-      accent-color: #6c63ff;
-      cursor: pointer;
-      vertical-align: middle;
-    }
-
-    #options small {
-      color: #4a4f5c;
-    }
-
-    #options {
-      margin-top: 6px;
-      padding-top: 6px;
-      border-top: 1px solid #edeef2;
-      line-height: 1.9;
-    }
-
-    #aksharamukha-navbar button {
-      font-family: inherit;
-      font-size: 12px;
-      font-weight: 500;
-      color: #4a4f5c;
-      background: #f4f5f8;
-      border: 1px solid #e2e4ea;
-      border-radius: 6px;
-      padding: 4px 10px;
-      cursor: pointer;
-      transition: background-color .15s ease, border-color .15s ease, color .15s ease;
-    }
-
-    #aksharamukha-navbar button:hover {
-      background: #ebe9ff;
-      border-color: #c9c3ff;
-      color: #4b3fd6;
-    }
-
-    #aksharamukha-navbar button:active {
-      background: #ddd8ff;
     }
 
     #aksharamukha-navbar {
       float: right;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-family: calibri;
       position: -webkit-sticky;
       position: sticky;
       top: 20px;
-      width: 190px;
-      padding: 14px 16px 12px;
-      border-radius: 12px;
-      background: #ffffff;
-      border: 1px solid #e7e8ee;
-      box-shadow: 0 4px 18px rgba(20, 20, 40, .08);
+      // border: 1px solid black;
+      width: 150px;
+      padding: 5px 5px 5px 5px;
+      background: #CDCDCD;
       z-index: 1000;
-    }
-
-    @media print
-    {
-      .aksharamukha-printhide
-      {
-          display: none !important;
-      }
-    }
-
-    @media only screen and (max-device-width: 760px) {
-    }
-
-    .aksharamukha-printhide {
-
     }
 
     #aksharamukha-navbar a {
      text-decoration: none;
-    }
-
-    #aksharamukha-loading {
-      margin-top:8px;
-      margin-bottom:5px;
-      color: #8a8f9c;
-    }
-
-    a.aksharamukha-hyperlink:link {
-      text-decoration: none;
-      color: #4a4f5c;
-    }
-
-    a.aksharamukha-hyperlink:visited {
-      text-decoration: none;
-      color: #4a4f5c;
-    }
-
-    a.aksharamukha-hyperlink:hover {
-      text-decoration: none;
-      color: #6c63ff;
-    }
-
-    a.aksharamukha-hyperlink:active {
-      text-decoration: none;
-      color: #6c63ff;
-    }
-
-    #aksharamukha-branding1, #aksharamukha-branding2 {
-      margin-top: 10px;
-      padding-top: 8px;
-      border-top: 1px solid #edeef2;
-      font-size: 90%;
-      color: #8a8f9c;
-    }
-
-    #aksharamukha-branding {
-      font-size: 90%;
     }
 
     #akshmukha-text {
@@ -2721,8 +2356,7 @@ function appendTool() {
     link.href = 'https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha/aksharamukha-front/src/statics/fonts.css'
     document.head.appendChild(link)
     document.getElementById('aksharamukhaselect').addEventListener('input', transliterate)
-    document.getElementById('aksharamukha-minlogobutton').addEventListener('click', showPlugin)
-    document.getElementById('aksharamukha-pluginhidebutton').addEventListener('click', hidePlugin)
+    document.getElementById('aksharamukha-preserve').addEventListener('change', transliterate)
     // Storing original content
     var transContent = document.getElementsByClassName(classURL)
     var texts = []
@@ -2741,55 +2375,21 @@ function appendTool() {
     navbarOld = document.getElementById('aksharamukha-navbar').innerHTML
     // Restore values
     var sel = document.getElementById('aksharamukhaselect')
-    if (window.location.search.indexOf('akshrmkh') > -1) {
-        var targetUrl = window.location.search.split('=')[window.location.search.split('=').length - 1]
-        sel.value = targetUrl
-        transliterate()
-    } else if (window.localStorage.getItem('target')) {
+    if (window.localStorage.getItem('target')) {
         sel.value = window.localStorage.getItem('target')
     }
+    if (window.localStorage.getItem('preservePrevious')) {
+        document.getElementById('aksharamukha-preserve').checked = JSON.parse(window.localStorage.getItem('preservePrevious'))
+    }
     if (window.localStorage.getItem('target')) {
-        //console.log('here3333')
         transliterate()
-        hidePlugin()
     }
-    if (window.localStorage.getItem('hidePlugin') === 'true') {
-        hidePlugin()
-    }
-    if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
-        hidePlugin()
-    }
-    console.log('here once')
 }
-async function transliterate(event) {
-    if (typeof event !== 'undefined' && event.target.id == 'aksharamukha-preserve') {
-        preservePrevious = event.target.checked
-        //console.log(event.target.checked)
-        //console.log(preservePrevious)
-        window.localStorage.setItem('preservePrevious', preservePrevious)
-    }
+async function transliterate() {
     var sel = document.getElementById('aksharamukhaselect')
     target = sel.value
-    if (changeURLParams) {
-        var url = window.location.href;
-        var refresh
-        if (url.indexOf('?') > -1) {
-            if (window.location.search.indexOf('akshrmkh') > -1) {
-                var oldPar = window.location.search.split('=')[window.location.search.split('=').length - 1]
-                //console.log(window.location.search)
-                var newPath = window.location.search.replace('akshrmkh=' + oldPar, 'akshrmkh=' + target)
-                refresh = window.location.protocol + "//" + window.location.host + window.location.pathname + newPath;
-            } else {
-                refresh = window.location.protocol + "//" + window.location.host + window.location.pathname + window.location.search + '&akshrmkh=' + target;
-            }
-        } else {
-            refresh = window.location.protocol + "//" + window.location.host + window.location.pathname + '?akshrmkh=' + target;
-        }
-        window.history.pushState({
-            path: refresh
-        }, '', refresh);
-    }
     if (scriptList.includes(target)) {
+        preservePrevious = document.getElementById('aksharamukha-preserve').checked
         var postOptionsChecked = []
         var postOptions = document.getElementsByName('aksharamukha-optionpost')
         postOptionsList = []
@@ -2815,50 +2415,33 @@ async function transliterate(event) {
         }
         var navbar = document.getElementById('aksharamukha-navbar')
         var moreButton = ''
-        if (optionsOutput(target) != '' || addPreserveSource(target) != '') {
+        if (optionsOutput(target) != '') {
             navbar.innerHTML = navbarOld
             if (optionsHide) {
-                moreButton = '<button id="aksharamukha-more"><small>More options</small></button>'
+                moreButton = '<br/><button id="aksharamukha-more">Show options</button>'
             } else {
-                moreButton = '<button id="aksharamukha-more"><small>Hide options</small></button>'
+                moreButton = '<br/><button id="aksharamukha-more">Hide options</button>'
             }
-            navbar.innerHTML = navbarOld + moreButton + "" + addPreserveSource(target) + optionsOutput(target, '')
+            navbar.innerHTML = navbarOld + moreButton + optionsOutput(target, '')
             document.getElementById('aksharamukha-more').addEventListener('click', optionsToggle)
-            if (addPreserveSource(target) !== '') {
-                document.getElementById('aksharamukha-preserve').checked = JSON.parse(window.localStorage.getItem('preservePrevious'))
-                document.getElementById('aksharamukha-preserve').addEventListener('change', transliterate)
-            }
             sel = document.getElementById('aksharamukhaselect')
             sel.value = target
         } else {
             navbar.innerHTML = navbarOld
         }
-        var newDivLoad = document.createElement("div")
-        newDivLoad.id = "aksharamukha-loading"
-        navbar.appendChild(newDivLoad)
-        document.getElementById('aksharamukha-branding1').innerHTML = ''
-        var branding1 = document.getElementById('aksharamukha-branding1')
-        branding1.id = 'aksharamukha-branding2'
-        var newDivLogo = document.createElement("div")
-        newDivLogo.id = "aksharamukha-branding"
-        var navbar = document.getElementById('aksharamukha-navbar')
-        navbar.appendChild(newDivLogo)
-        document.getElementById('aksharamukha-branding').innerHTML = '<a href="http://aksharamukha.appspot.com" class="aksharamukha-hyperlink" target="_blank"><img src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin/icon.png" width="15px"/> <small><sup>Aksharamukha </sup></small></a>'
+        document.getElementById('aksharamukha-preserve').checked = preservePrevious
         document.getElementById('aksharamukhaselect').addEventListener('input', transliterate)
-        document.getElementById('aksharamukha-minlogobutton').addEventListener('click', showPlugin)
-        document.getElementById('aksharamukha-pluginhidebutton').addEventListener('click', hidePlugin)
+        document.getElementById('aksharamukha-preserve').addEventListener('change', transliterate)
         postOptions.forEach(function(postOption, index) {
             postOption.checked = postOptionsChecked[index]
             postOption.addEventListener('change', transliterate)
         })
         window.localStorage.setItem('target', target)
+        window.localStorage.setItem('preservePrevious', preservePrevious)
         window.localStorage.setItem('postOptionsChecked' + target, postOptionsChecked)
         window.localStorage.setItem('postOptionsList' + target, postOptionsList)
         var transContent = document.getElementsByClassName(classURL)
         document.getElementById('aksharamukhaselect').value = target
-        if (window.localStorage.getItem('preservePrevious')) {
-            preservePrevious = JSON.parse(window.localStorage.getItem('preservePrevious'))
-        }
         for (var i = 0; i < transContent.length; i++) {
             var source = ''
             transContent[i].classList.forEach(function(clas) {
@@ -2884,9 +2467,7 @@ async function transliterate(event) {
                 //transContent[i].classList.remove(ScriptMixin.methods.getOutputClass(targetOld, postOptionsListOld))
             }
             //transContent[i].classList.add(ScriptMixin.methods.getOutputClass(target, postOptionsList))
-            document.getElementById('aksharamukha-loading').innerHTML = '<img src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin/loading.gif" width="70px" />'
             await translit(transContent[i], i, source, targetOld, target)
-            document.getElementById('aksharamukha-loading').innerHTML = ''
             //getResult(transContent[i], i, source, targetOld)
         }
         targetOld = target
@@ -2894,97 +2475,16 @@ async function transliterate(event) {
     }
 }
 
-function hidePlugin() {
-    document.getElementsByClassName('aksharamukha-name')[0].style.display = 'none'
-    document.getElementsByClassName('aksharamukha-selection')[0].style.display = 'none'
-    if (document.getElementById('aksharamukha-more')) {
-        document.getElementById('aksharamukha-more').style.display = 'none'
-    }
-    if (document.getElementById('aksharamukha-branding')) {
-        document.getElementById('aksharamukha-branding').style.display = 'none'
-    }
-    if (document.getElementById('aksharamukha-branding1')) {
-        document.getElementById('aksharamukha-branding1').style.display = 'none'
-    }
-    if (document.getElementById('aksharamukha-options')) {
-        document.getElementById('aksharamukha-options').style.display = 'none'
-    }
-    if (document.getElementById('aksharamukha-preservebut')) {
-        document.getElementById('aksharamukha-preservebut').style.display = 'none'
-    }
-    document.getElementById('aksharamukha-minlogo').style.display = 'block'
-    document.getElementById('message').style.display = 'block'
-
-    var sel = document.getElementById('aksharamukhaselect')
-
-    if(typeof window.localStorage.getItem('target') !== 'undefined' && window.localStorage.getItem('target') !== null) {
-        //console.log('here 33 ' + window.localStorage.getItem('target'))
-        document.getElementById('scriptName').innerText = window.localStorage.getItem('target')
-    } else {
-        //console.log('here selecting ' + sel.value)
-        document.getElementById('scriptName').innerText = sel.value
-    }
-    if (sel.value === 'Original' || window.localStorage.getItem('target') === 'Original') {
-        document.getElementById('message').style.display = 'none'
-    }
-    window.localStorage.setItem('hidePlugin', 'true')
-}
-
-function showPlugin() {
-    document.getElementsByClassName('aksharamukha-name')[0].style.display = ''
-    document.getElementsByClassName('aksharamukha-selection')[0].style.display = ''
-    if (document.getElementById('aksharamukha-more')) {
-        document.getElementById('aksharamukha-more').style.display = ''
-    }
-    if (document.getElementById('aksharamukha-branding')) {
-        document.getElementById('aksharamukha-branding').style.display = ''
-    }
-    if (document.getElementById('aksharamukha-branding1')) {
-        document.getElementById('aksharamukha-branding1').style.display = ''
-    }
-    if (document.getElementById('aksharamukha-options')) {
-        document.getElementById('aksharamukha-options').style.display = ''
-    }
-    if (document.getElementById('aksharamukha-preservebut')) {
-        document.getElementById('aksharamukha-preservebut').style.display = ''
-    }
-    document.getElementById('aksharamukha-minlogo').style.display = 'none'
-    window.localStorage.setItem('hidePlugin', 'false')
-}
-
 function optionsToggle() {
     var el = document.getElementById('options')
-    var elpre = document.getElementById('aksharamukha-preservebut')
     var button = document.getElementById('aksharamukha-more')
     optionsHide = !optionsHide
-    if (button.innerHTML == '<small>More options</small>') {
-        if (el != null) {
-            el.classList = ['aksharamukha-showup']
-        }
-        if (elpre != null) {
-            elpre.classList = ['aksharamukha-showup']
-        }
-        button.innerHTML = '<small>Hide options</small>'
+    if (button.innerHTML == 'Show options') {
+        el.classList = ['aksharamukha-showup']
+        button.innerHTML = 'Hide options'
     } else {
-        if (el != null) {
-            el.classList = ['aksharamukha-hidedown']
-        }
-        if (elpre != null) {
-            elpre.classList = ['aksharamukha-hidedown']
-        }
-        button.innerHTML = '<small>More options</small>'
-    }
-}
-
-function addPreserveSource(target) {
-    var explO = ScriptMixin.data().preserveSourceExampleOut[target]
-    if (typeof explO !== 'undefined' && target !== 'Original') {
-        var expl = '<small>' + explO + '</small>'
-        var cls = optionsHide ? '"aksharamukha-hidedown"' : '"aksharamukha-showup"'
-        var button = '<span id = "aksharamukha-preservebut" class=' + cls + '><div><input type="checkbox" name="preserve" id="aksharamukha-preserve"/> <small>Preserve source<br/> ' + expl + '</small><hr/></div></span>'
-        return button
-    } else {
-        return ''
+        el.classList = ['aksharamukha-hidedown']
+        button.innerHTML = 'Show options'
     }
 }
 window.addEventListener('load', appendTool)
