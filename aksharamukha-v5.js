@@ -1,7 +1,7 @@
 /* Aksharamukha Web Plugin v5 - GENERATED FILE, do not edit directly.
  * Built by build-scripts/build-web-plugin-v5.js from:
- *   aksharamukha-web-plugin/src/script-data.generated.js
- *   aksharamukha-web-plugin/src/v5-plugin.js
+ *   src/script-data.generated.js
+ *   src/v5-plugin.js
  * Edit those sources (and re-run build-web-plugin-data.js first if
  * ScriptMixin.js changed), then re-run this script.
  */

@@ -4,18 +4,20 @@
  * "one file to drop on a CDN" shape as v2/v3/v4, from two hand-maintained
  * sources plus the generated script-data:
  *
- *   1. aksharamukha-web-plugin/src/script-data.generated.js
- *      (produced by build-web-plugin-data.js from the front-end's
- *      ScriptMixin.js - re-run that script first if it's stale)
- *   2. aksharamukha-web-plugin/src/v5-plugin.js
- *      (the actual plugin logic - hand-edited)
+ *   1. src/script-data.generated.js
+ *      (produced by the aksharamukha monorepo's build-web-plugin-data.js
+ *      from its aksharamukha-front/src/mixins/ScriptMixin.js - the only
+ *      copy of that source; re-run that script over there, pointed at
+ *      this repo, if this file is stale - see README.md)
+ *   2. src/v5-plugin.js
+ *      (the actual plugin logic - hand-edited, lives in this repo)
  *
  * Usage: node build-scripts/build-web-plugin-v5.js
  */
 const fs = require('fs')
 const path = require('path')
 
-const PLUGIN_DIR = path.join(__dirname, '..', 'aksharamukha-web-plugin')
+const PLUGIN_DIR = path.join(__dirname, '..')
 const DATA_FILE = path.join(PLUGIN_DIR, 'src', 'script-data.generated.js')
 const PLUGIN_FILE = path.join(PLUGIN_DIR, 'src', 'v5-plugin.js')
 const OUT_FILE = path.join(PLUGIN_DIR, 'aksharamukha-v5.js')
@@ -33,8 +35,8 @@ function main () {
 
   const banner = '/* Aksharamukha Web Plugin v5 - GENERATED FILE, do not edit directly.\n' +
     ' * Built by build-scripts/build-web-plugin-v5.js from:\n' +
-    ' *   aksharamukha-web-plugin/src/script-data.generated.js\n' +
-    ' *   aksharamukha-web-plugin/src/v5-plugin.js\n' +
+    ' *   src/script-data.generated.js\n' +
+    ' *   src/v5-plugin.js\n' +
     ' * Edit those sources (and re-run build-web-plugin-data.js first if\n' +
     ' * ScriptMixin.js changed), then re-run this script.\n' +
     ' */\n'

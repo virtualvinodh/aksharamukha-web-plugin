@@ -6,7 +6,7 @@ launcher appears letting visitors pick a target script.
 
 ```html
 <div class="aksharamukha-text">आपका पाठ यहाँ जाएगा</div>
-<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha/aksharamukha-web-plugin/aksharamukha-v5.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin/aksharamukha-v5.js"></script>
 ```
 
 `aksharamukha-v5.js` is the current version. `aksharamukha-v2.js`/`v3.js`/`v4.js`
@@ -51,10 +51,10 @@ All parameters go on the `<script src="...">` URL itself, e.g.
 
 ```html
 <!-- lightweight: always uses the hosted API, no WASM download -->
-<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha/aksharamukha-web-plugin/aksharamukha-v5.js?engine=api"></script>
+<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin/aksharamukha-v5.js?engine=api"></script>
 
 <!-- panel in the bottom-left, offset for a page with a tall fixed footer -->
-<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha/aksharamukha-web-plugin/aksharamukha-v5.js?position=bottom-left&offset=60"></script>
+<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin/aksharamukha-v5.js?position=bottom-left&offset=60"></script>
 ```
 
 ## Per-element markup
@@ -67,7 +67,7 @@ element instead of (or in addition to) the script-tag-wide `source`/
 <div class="verse inputscript-Telugu">మహాశ్రమణ</div>
 <div class="verse inputscript-Malayalam">കുസുമിതോ ലക്ഷണൈഃ</div>
 <div class="verse inputscript-Tamil preoptions-TamilTranscribe">ஆதீஸ்வர் ஸ்ரீவிருஷபநாதர்</div>
-<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha/aksharamukha-web-plugin/aksharamukha-v5.js?class=verse"></script>
+<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin/aksharamukha-v5.js?class=verse"></script>
 ```
 
 Elements added to the page later (SPA route changes, AJAX-loaded content,
@@ -82,9 +82,48 @@ currently selected - no rescan or re-init needed.
   instantiation is blocked under `file://` in most browsers. From this
   folder: `python -m http.server 8000`, then open `http://localhost:8000/demo-v5.html`.
 
-The plugin is built from source, not hand-edited directly:
+## Build pipeline (spans two repos)
 
-- `src/script-data.generated.js` - the script/pre-option/post-option catalog, generated from the front-end's `ScriptMixin.js` by `../build-scripts/build-web-plugin-data.js`. Re-run that script after `ScriptMixin.js` changes.
-- `src/v5-plugin.js` - the actual plugin logic, hand-edited.
-- `../build-scripts/build-web-plugin-v5.js` - concatenates the two sources above into `aksharamukha-v5.js`. Run this after editing `src/v5-plugin.js` or regenerating `src/script-data.generated.js`.
-- `../build-scripts/copy-wasm-assets.ps1` - copies the Pyodide runtime + `aksharamukha` wheel from a sibling `aksharamukha-python/aksharamukha-wasm` checkout into `wasm/` (gitignored - it's a ~20MB binary payload, host it on your CDN alongside the script for production rather than committing it).
+`aksharamukha-v5.js` is built from source, not hand-edited directly - and
+that source is split across **this** repo and the
+[virtualvinodh/aksharamukha](https://github.com/virtualvinodh/aksharamukha)
+monorepo, because the script/option catalog's only source of truth
+(`aksharamukha-front/src/mixins/ScriptMixin.js`) lives there, not here.
+
+Expected local layout - both repos checked out as siblings under the same
+parent folder:
+
+```
+Projects/
+├─ aksharamukha/              (the monorepo - ScriptMixin.js lives here)
+│  └─ build-scripts/build-web-plugin-data.js
+├─ aksharamukha-web-plugin/   (this repo)
+│  ├─ src/script-data.generated.js   <- generated, see step 1
+│  ├─ src/v5-plugin.js               <- hand-edited, lives here
+│  ├─ build-scripts/build-web-plugin-v5.js
+│  └─ build-scripts/copy-wasm-assets.ps1
+└─ aksharamukha-python/       (only needed for step 3, the WASM engine)
+   └─ aksharamukha-wasm/
+```
+
+To rebuild after a change:
+
+1. **If `ScriptMixin.js` changed** (new script, new pre/post-option, etc.):
+   in the **monorepo**, run `node build-scripts/build-web-plugin-data.js`.
+   With the sibling layout above, it finds this repo automatically and
+   writes `src/script-data.generated.js` here; pass a path as an argument
+   if your checkout of this repo lives somewhere else. This step doesn't
+   apply to plugin-only changes (UI, engine logic) - skip straight to 2.
+2. **Always**, after step 1 or after editing `src/v5-plugin.js` directly:
+   in **this repo**, run `node build-scripts/build-web-plugin-v5.js`. It
+   concatenates `src/script-data.generated.js` + `src/v5-plugin.js` into
+   `aksharamukha-v5.js`.
+3. **Only after a Pyodide/wheel version bump** (rare): in **this repo**,
+   run `pwsh build-scripts/copy-wasm-assets.ps1` to copy the Pyodide
+   runtime + `aksharamukha` wheel from a sibling `aksharamukha-python`
+   checkout into `wasm/` (gitignored here - it's a ~20MB binary payload;
+   host it on your CDN alongside the script for production rather than
+   committing it, or point embeds at it via `?wasmbase=`).
+
+There's no build script in this repo that touches `ScriptMixin.js` or the
+monorepo at all - that direction only ever runs from the monorepo side.
