@@ -133,7 +133,60 @@ above): run `pwsh build-scripts/copy-wasm-assets.ps1` to copy the
 Pyodide runtime + `aksharamukha` wheel from a sibling `aksharamukha-python`
 checkout into `wasm/` (gitignored here - it's a ~20MB binary payload;
 host it on your CDN alongside the script for production rather than
-committing it, or point embeds at it via `?wasmbase=`).
+committing it, or point embeds at it via `?wasmbase=`). This also
+pre-compresses every file to a `.br` sibling (`pyodide.asm.wasm.br`,
+etc.) - see below for why, and what your host needs to do with them.
+Pass `-SkipCompression` to skip that step.
 
 There's no build script in this repo that *writes to* `ScriptMixin.js`
 or anything else in the monorepo - it only ever reads from it.
+
+## Serving pre-compressed assets
+
+`copy-wasm-assets.ps1` generates a `.br` (Brotli) sibling next to every
+file under `wasm/`, using .NET's built-in Brotli codec at maximum
+quality - measured effect on the real files:
+
+| File | Original | `.br` | Reduction |
+|---|---|---|---|
+| `pyodide.asm.wasm` | 10.09 MB | 2.26 MB | 78% |
+| `pyodide.asm.js` | 1.23 MB | 193 KB | 84% |
+| `pyodide.js` | 16.5 KB | 5.8 KB | 65% |
+| `python_stdlib.zip` + all `.whl` files | ~7.6 MB combined | ~7.5 MB combined | 2-10% |
+| **Total** | **~19 MB** | **~8 MB** | **~58%** |
+
+The raw `.wasm`/`.js` compress dramatically; the `.zip`/`.whl` files barely
+shrink, since they're already-compressed archives and Brotli has little
+left to squeeze out of them. Don't expect the whole payload to drop to
+4-6MB - **~8MB total is the realistic floor** for this asset set.
+
+Generating the `.br` files does nothing by itself - **your web server or
+CDN has to be configured to serve them** in place of the original when a
+client's `Accept-Encoding` header allows it, with a `Content-Encoding: br`
+response header on the reply. How to do that depends on where you host
+`wasm/`:
+
+- **nginx**: the `brotli_static on;` directive (via the `ngx_brotli`
+  module) serves a `.br` sibling automatically when present, with no
+  per-request compression cost.
+- **Static hosts / CDNs** (Netlify, Vercel, CloudFront, etc.): check
+  whether they auto-detect and serve pre-compressed siblings, or need a
+  build/deploy config to declare it (varies by provider - some instead
+  compress on the fly, which is also fine, just don't skip checking).
+  jsDelivr does its own on-the-fly Brotli/gzip compression already for
+  eligible file types, so `.br` siblings hosted there specifically are
+  redundant (harmless, just unused) rather than required.
+- Verify with `curl -H "Accept-Encoding: br" -D - -o /dev/null <url>`
+  once deployed - look for `Content-Encoding: br` in the response.
+  Without it, every visitor is silently downloading the full uncompressed
+  originals and the `.br` files are dead weight in your deployment.
+
+Verified locally with a small server that serves the `.br` sibling when
+`Accept-Encoding` allows it: a full plugin load + conversion completed
+correctly, with the browser receiving ~8.3MB over the wire for the whole
+page instead of the ~19MB uncompressed cold start.
+
+(Considered `wasm-opt -Oz` too, re-optimizing `pyodide.asm.wasm` itself -
+confirmed it still works if applied, but only shrinks the file by ~3%,
+since Pyodide's official build is already well-optimized. Not worth the
+added Binaryen build dependency for that little.)
