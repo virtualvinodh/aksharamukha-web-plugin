@@ -58,6 +58,19 @@ test('return visit with a saved target starts collapsed to the badge', async ({ 
   await expect(page.locator('#aksharamukhaselect')).toHaveValue('Tamil')
 })
 
+test('launcher badge shows the current script name, not an abbreviation, and clears for Original', async ({ page }) => {
+  await page.goto(DEMO)
+  await selectScript(page, 'Kannada')
+  await expect(page.locator('.aksharamukha-text').first()).toContainText('ನಮಸ್ತೇ', { timeout: 15000 })
+  await page.click('#aksharamukha-pluginhidebutton')
+  await expect(page.locator('#aksharamukha-launcher-label')).toHaveText('Kannada')
+  await expect(page.locator('#aksharamukha-launcher')).toHaveClass(/aksharamukha-has-label/)
+
+  await selectScript(page, 'Original script')
+  await expect(page.locator('#aksharamukha-launcher-label')).toHaveText('')
+  await expect(page.locator('#aksharamukha-launcher')).not.toHaveClass(/aksharamukha-has-label/)
+})
+
 test('"Original script" reverts converted text back to the source', async ({ page }) => {
   await page.goto(DEMO)
   const original = await page.locator('.aksharamukha-text').first().innerText()

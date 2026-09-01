@@ -39,6 +39,14 @@ All parameters go on the `<script src="...">` URL itself, e.g.
 | `position` | `top-right` | Which viewport corner the launcher/panel live in: `top-right`, `top-left`, `bottom-right`, or `bottom-left`. The launcher and the expanded panel always share this corner and swap visibility, so they never overlap each other. |
 | `offset` | `20` | Distance in px from whichever edge(s) `position` puts the panel against. Raise this if your page has a fixed header/footer at that edge that would otherwise sit on top of the panel - e.g. `offset=80` for an 80px-tall fixed header when using a `top-*` position. |
 
+When collapsed, the launcher badge shows the current script's full name
+(e.g. "Kannada") once a real target is selected, so a visitor can see
+what's currently displayed at a glance without expanding the panel -
+works the same on touch as on desktop, unlike a hover-only tooltip. It's
+the full name, not an abbreviation - there's no reliable 2-3 letter
+shorthand for something like "Zanabazar Square" that everyone would
+recognize. Empty (plain icon) for "Original script".
+
 > **⚠️ If no element on the page has the `class` above, the plugin wraps
 > and converts the ENTIRE `<body>` - navigation, footer, everything, not
 > just "the main content."** This is a deliberate zero-setup fallback

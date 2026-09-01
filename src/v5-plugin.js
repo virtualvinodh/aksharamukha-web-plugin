@@ -541,7 +541,8 @@ var Panel = (function () {
     launcher.className = 'aksharamukha-printhide'
     launcher.title = 'Convert script (Aksharamukha)'
     launcher.setAttribute('aria-label', 'Open script converter')
-    launcher.innerHTML = '<img src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin/icon.png" width="22px" alt=""/>'
+    launcher.innerHTML = '<img src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin/icon.png" width="22px" alt=""/>' +
+      '<span id="aksharamukha-launcher-label"></span>'
     document.body.appendChild(launcher)
 
     applyPosition(launcher)
@@ -572,6 +573,7 @@ var Panel = (function () {
 
     els.root = root
     els.launcher = launcher
+    els.launcherLabel = launcher.querySelector('#aksharamukha-launcher-label')
     els.select = root.querySelector('#aksharamukhaselect')
     els.searchInput = root.querySelector('#aksharamukha-select-input')
     els.listbox = root.querySelector('#aksharamukha-listbox')
@@ -681,6 +683,15 @@ var Panel = (function () {
     els.select.value = value
     var match = optionsData.filter(function (o) { return o.value === value })[0]
     els.searchInput.value = match ? match.label : value
+    // The launcher badge shows the current script's full name (not an
+    // abbreviation - there's no reliable way to abbreviate "Zanabazar
+    // Square" or "Meetei Mayek" that everyone would recognize) whenever a
+    // real target is selected, so a visitor can see what's currently
+    // displayed at a glance without expanding the panel - on any device,
+    // not just on hover, which a tooltip alone wouldn't cover. Empty for
+    // "Original script": that state doesn't need announcing.
+    els.launcherLabel.textContent = (value !== 'Original' && match) ? match.label : ''
+    els.launcher.classList.toggle('aksharamukha-has-label', value !== 'Original' && !!match)
     closeListbox()
     // Deliberately does NOT auto-collapse the panel on a pick: someone
     // comparing scripts or fine-tuning post-options wants to keep making
@@ -989,7 +1000,9 @@ var PANEL_CSS = '\n' +
   '.aksharamukha-progressbar.active { display: block; }\n' +
   '.aksharamukha-progressbar div { height: 100%; width: 40%; background: var(--aksharamukha-accent, #6c63ff); border-radius: 2px; animation: aksharamukha-indeterminate 1.1s ease-in-out infinite; }\n' +
   '@keyframes aksharamukha-indeterminate { 0% { transform: translateX(-100%); } 100% { transform: translateX(350%); } }\n' +
-  '#aksharamukha-launcher { position: fixed; width: 44px; height: 44px; border-radius: 50%; background: var(--aksharamukha-bg, #fff); border: 1px solid var(--aksharamukha-border, #e7e8ee); box-shadow: 0 4px 14px rgba(20,20,40,.15); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 1000; padding: 0; }\n' +
+  '#aksharamukha-launcher { position: fixed; width: 44px; height: 44px; border-radius: 22px; background: var(--aksharamukha-bg, #fff); border: 1px solid var(--aksharamukha-border, #e7e8ee); box-shadow: 0 4px 14px rgba(20,20,40,.15); display: flex; align-items: center; justify-content: center; gap: 7px; cursor: pointer; z-index: 1000; padding: 0; overflow: hidden; transition: width .15s ease, padding .15s ease; }\n' +
+  '#aksharamukha-launcher.aksharamukha-has-label { width: auto; max-width: 220px; padding: 0 14px 0 11px; }\n' +
+  '#aksharamukha-launcher-label { font-family: var(--aksharamukha-font, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif); font-size: 13px; font-weight: 500; color: var(--aksharamukha-text, #1f2430); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n' +
   '#aksharamukha-launcher:hover { box-shadow: 0 6px 18px rgba(20,20,40,.22); }\n' +
   '#aksharamukha-launcher.aksharamukha-collapsed { display: none; }\n' +
   '#aksharamukha-launcher.is-loading::after { content: ""; position: absolute; inset: -3px; border-radius: 50%; border: 2px solid transparent; border-top-color: var(--aksharamukha-accent, #6c63ff); border-right-color: var(--aksharamukha-accent, #6c63ff); animation: aksharamukha-spin .8s linear infinite; }\n' +
