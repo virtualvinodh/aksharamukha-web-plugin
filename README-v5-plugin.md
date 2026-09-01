@@ -6,10 +6,10 @@ launcher appears letting visitors pick a target script.
 
 ```html
 <div class="aksharamukha-text">आपका पाठ यहाँ जाएगा</div>
-<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@v5.0.2/aksharamukha-v5.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@v5.0.3/aksharamukha-v5.js"></script>
 ```
 
-That `@v5.0.2` matters - see "Releasing a new version" below for why real
+That `@v5.0.3` matters - see "Releasing a new version" below for why real
 embeds should always pin a tag like this instead of tracking `master`.
 
 `aksharamukha-v5.js` is the current version. `aksharamukha-v2.js`/`v3.js`/`v4.js`
@@ -63,10 +63,10 @@ All parameters go on the `<script src="...">` URL itself, e.g.
 
 ```html
 <!-- lightweight: always uses the hosted API, no WASM download -->
-<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@v5.0.2/aksharamukha-v5.js?engine=api"></script>
+<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@v5.0.3/aksharamukha-v5.js?engine=api"></script>
 
 <!-- panel in the bottom-left, offset for a page with a tall fixed footer -->
-<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@v5.0.2/aksharamukha-v5.js?position=bottom-left&offset=60"></script>
+<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@v5.0.3/aksharamukha-v5.js?position=bottom-left&offset=60"></script>
 ```
 
 ## Theming
@@ -127,7 +127,7 @@ element instead of (or in addition to) the script-tag-wide `source`/
 <div class="verse inputscript-Telugu">మహాశ్రమణ</div>
 <div class="verse inputscript-Malayalam">കുസുമിതോ ലക്ഷണൈഃ</div>
 <div class="verse inputscript-Tamil preoptions-TamilTranscribe">ஆதீஸ்வர் ஸ்ரீவிருஷபநாதர்</div>
-<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@v5.0.2/aksharamukha-v5.js?class=verse"></script>
+<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@v5.0.3/aksharamukha-v5.js?class=verse"></script>
 ```
 
 Elements added to the page later (SPA route changes, AJAX-loaded content,
@@ -296,7 +296,7 @@ pre-compression). **Real embeds - anything you'd actually tell someone to
 paste into their site - must pin a tag, not track `master`:**
 
 ```html
-<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@v5.0.2/aksharamukha-v5.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@v5.0.3/aksharamukha-v5.js"></script>
 ```
 
 jsDelivr treats a tag-pinned path as immutable and caches it long-term,
@@ -322,7 +322,7 @@ snippet to move forward):
 5. Update embed snippets that should move to the new version - in this
    README, the root README, and anywhere else you've told people to
    paste a snippet from - to the new `@vX.Y.Z` tag.
-6. Leave old tags (`@v5.0.2`, etc.) in place, forever - anyone who pinned
+6. Leave old tags (`@v5.0.3`, etc.) in place, forever - anyone who pinned
    one is relying on it never changing, same principle as `v2.js`/`v3.js`
    staying frozen.
 
