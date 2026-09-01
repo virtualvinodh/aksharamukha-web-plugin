@@ -39,6 +39,15 @@ All parameters go on the `<script src="...">` URL itself, e.g.
 | `position` | `top-right` | Which viewport corner the launcher/panel live in: `top-right`, `top-left`, `bottom-right`, or `bottom-left`. The launcher and the expanded panel always share this corner and swap visibility, so they never overlap each other. |
 | `offset` | `20` | Distance in px from whichever edge(s) `position` puts the panel against. Raise this if your page has a fixed header/footer at that edge that would otherwise sit on top of the panel - e.g. `offset=80` for an 80px-tall fixed header when using a `top-*` position. |
 
+> **⚠️ If no element on the page has the `class` above, the plugin wraps
+> and converts the ENTIRE `<body>` - navigation, footer, everything, not
+> just "the main content."** This is a deliberate zero-setup fallback
+> (inherited from v2/v3/v4), not a bug, but it's easy to hit by accident:
+> forgetting to add `class="aksharamukha-text"` to your content doesn't
+> mean "nothing gets converted," it means "the whole page does." If you
+> want only part of a page convertible, that class (or `?class=yourname`)
+> is not optional.
+
 ### `prelist` presets
 
 - `majorindic` - Major Indic Scripts
