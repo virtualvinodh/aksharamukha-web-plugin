@@ -98,6 +98,25 @@ plugin's internal selectors:
 Every property has a default baked in (shown above), so you only need to
 set the ones you actually want to change.
 
+**These variables are the supported way to restyle the panel - directly
+overriding `#aksharamukha-navbar { background: ...; border: ...; }` in your
+own CSS is not, and verifiably doesn't reliably work.** The plugin injects
+its own `#aksharamukha-navbar` rule via JavaScript *after* your page's own
+`<style>`/`<link>` tags have already been parsed, so on equal specificity
+(an ID selector vs. the same ID selector) the plugin's later-loaded rule
+wins the cascade tie, not yours - confirmed by testing the exact snippet
+above against a real page. Custom properties don't have this problem:
+the plugin never *declares* `--aksharamukha-bg` itself, it only *reads*
+it via `var(--aksharamukha-bg, #fff)`, so there's no rule from the
+plugin to lose a specificity/order fight against - whatever you set on
+`:root` simply is the value, regardless of when either stylesheet loaded.
+
+The panel's `top`/`left`/`right`/`bottom` position is set via inline
+style (driven by `?position=`/`?offset=`), which beats any stylesheet
+selector rule regardless of specificity or order - a plain `#aksharamukha-navbar { top: 0; }`
+in your CSS can never move it. Use `?offset=0` on the script URL instead
+if you want it flush against the edge.
+
 ## Per-element markup
 
 Mixed-source pages can override the source script and pre-options per

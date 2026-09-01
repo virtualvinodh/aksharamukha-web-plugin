@@ -179,3 +179,18 @@ test('theming: a host page setting --aksharamukha-* custom properties is respect
   const radius = await page.locator('#aksharamukha-navbar').evaluate(el => getComputedStyle(el).borderRadius)
   expect(radius).toBe('3px')
 })
+
+test('?offset=0 is honored, not silently replaced by the default', async ({ page }) => {
+  // Regression: offset used `parseInt(...) || 20`, and 0 is falsy in JS,
+  // so an explicit ?offset=0 (a legitimate "flush against the edge"
+  // value) was silently replaced with the 20px default.
+  await page.goto(DEMO)
+  await page.setContent(`
+    <!DOCTYPE html><html><head><meta charset="utf-8"/></head>
+    <body><p class="aksharamukha-text">test</p>
+    <script src="/aksharamukha-v5.js?engine=api&offset=0"></script></body></html>
+  `, { waitUntil: 'load' })
+  await page.waitForTimeout(500)
+  const top = await page.locator('#aksharamukha-navbar').evaluate(el => getComputedStyle(el).top)
+  expect(top).toBe('0px')
+})

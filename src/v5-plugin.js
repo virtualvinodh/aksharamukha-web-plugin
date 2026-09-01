@@ -79,8 +79,13 @@ var Config = (function () {
     // Distance in px from whichever edge(s) `position` puts the panel
     // against. Default (20px) assumes no fixed header/footer at that edge;
     // a site with one can pass e.g. ?offset=80 rather than forking the
-    // script.
-    offset: parseInt(params.get('offset'), 10) || 20
+    // script. Deliberately not `parseInt(...) || 20` - ?offset=0 is a
+    // legitimate, meaningful value (flush against the edge), and `0` is
+    // falsy in JS, so `||` would silently replace it with the default.
+    offset: (function () {
+      var parsed = parseInt(params.get('offset'), 10)
+      return isNaN(parsed) ? 20 : parsed
+    })()
   }
 })()
 
