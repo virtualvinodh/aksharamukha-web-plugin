@@ -193,6 +193,47 @@ test('theming: a host page setting --aksharamukha-* custom properties is respect
   expect(radius).toBe('3px')
 })
 
+test('engine=auto routes small text to the API, not a WASM boot', async ({ page }) => {
+  // Regression: auto mode used to always try WASM first regardless of
+  // text size, forcing every visitor through the ~9s cold boot even for a
+  // one-line page. It should now go straight to the API for small text
+  // and only pay the WASM boot cost above the size threshold.
+  //
+  // The plugin also warms WASM up eagerly in the background on idle, which
+  // would otherwise race this test and make wasmReadyPromise already
+  // truthy by the time the size check runs - disabling requestIdleCallback
+  // keeps that warm-up from ever starting, so this isolates the size logic
+  // itself rather than the warm-up race.
+  await page.addInitScript(() => { window.requestIdleCallback = () => {} })
+  const apiRequests = []
+  await page.route('https://aksharamukha-plugin.appspot.com/api/plugin', route => {
+    apiRequests.push(route.request())
+    route.continue()
+  })
+  await page.goto('/demo-v5.html')
+  await selectScript(page, 'Tamil')
+  await expect(page.locator('.aksharamukha-text').first()).toContainText('நமஸ்தே', { timeout: 15000 })
+  expect(apiRequests.length).toBeGreaterThan(0)
+})
+
+test('engine=auto routes large text to WASM, not the API', async ({ page }) => {
+  await page.goto('/demo-v5.html')
+  const apiRequests = []
+  await page.route('https://aksharamukha-plugin.appspot.com/api/plugin', route => {
+    apiRequests.push(route.request())
+    route.continue()
+  })
+  await page.evaluate(() => {
+    const sentence = 'नमस्ते, अक्षरमुखा एक लिपि परिवर्तन उपकरण है। '
+    let text = ''
+    while (new Blob([text]).size < 320 * 1024) text += sentence
+    document.querySelector('.aksharamukha-text').textContent = text
+  })
+  await selectScript(page, 'Tamil')
+  await expect(page.locator('.aksharamukha-text').first()).toContainText('நமஸ்தே', { timeout: 30000 })
+  expect(apiRequests.length).toBe(0)
+})
+
 test('?offset=0 is honored, not silently replaced by the default', async ({ page }) => {
   // Regression: offset used `parseInt(...) || 20`, and 0 is falsy in JS,
   // so an explicit ?offset=0 (a legitimate "flush against the edge"

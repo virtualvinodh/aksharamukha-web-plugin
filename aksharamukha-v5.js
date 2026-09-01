@@ -3861,10 +3861,29 @@ var Engine = (function () {
     return res.text()
   }
 
+  // Above this, the hosted API's per-request latency (which scales with
+  // payload size) exceeds the WASM engine's fixed ~9s cold-boot cost -
+  // measured empirically, the two cross over around ~350KB of source text.
+  // Below it, api's near-zero fixed cost wins comfortably.
+  var AUTO_LARGE_TEXT_BYTES = 300 * 1024
+
+  function totalTextBytes (jobs) {
+    var total = 0
+    for (var i = 0; i < jobs.length; i++) total += new Blob([jobs[i].text || '']).size
+    return total
+  }
+
   async function convertAll (jobs, options) {
     options = options || {}
     var mode = Config.engine
     if (mode === 'api') {
+      return Promise.all(jobs.map(function (job) { return convertOneApi(job, options.signal) }))
+    }
+    // In auto mode, only pay the WASM boot cost for genuinely large text.
+    // If WASM is already booted (e.g. warmUp() finished in the background,
+    // or a previous large conversion on this page already paid the cost),
+    // using it is free regardless of size, so skip straight to it.
+    if (mode === 'auto' && !wasmReadyPromise && totalTextBytes(jobs) < AUTO_LARGE_TEXT_BYTES) {
       return Promise.all(jobs.map(function (job) { return convertOneApi(job, options.signal) }))
     }
     try {
