@@ -4155,7 +4155,7 @@ var Panel = (function () {
       '<div id="aksharamukha-loading" aria-live="polite"><div class="aksharamukha-progressbar"><div></div></div><small></small></div>' +
       '<div id="aksharamukha-error" hidden></div>' +
       '<div id="aksharamukha-branding">' +
-      '<a href="http://aksharamukha.appspot.com" class="aksharamukha-hyperlink" target="_blank" rel="noopener">' +
+      '<a href="https://aksharamukha.com" class="aksharamukha-hyperlink" target="_blank" rel="noopener">' +
       '<img src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin/icon.png" width="15px" alt=""/> <small><sup>Aksharamukha</sup></small></a>' +
       '</div>'
     document.body.insertAdjacentElement('afterbegin', root)
