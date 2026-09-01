@@ -220,7 +220,6 @@ var Engine = (function () {
         await installLocalWheel(pyodide, micropip, new URL('pyodide/' + localWheels[i], base).href, localWheels[i])
       }
       // The aksharamukha wheel itself lives under wasm/wheel/, not wasm/pyodide/.
-      var wheelResp = await fetch(new URL('wheel/', base).href).catch(function () { return null })
       var aksharamukhaWheelName = 'aksharamukha-2.3-py3-none-any.whl'
       await installLocalWheel(pyodide, micropip, new URL('wheel/' + aksharamukhaWheelName, base).href, aksharamukhaWheelName)
       transliterateModule = pyodide.pyimport('aksharamukha.transliterate')
