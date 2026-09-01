@@ -4535,48 +4535,54 @@ var Panel = (function () {
   }
 })()
 
+// Colors/sizing referenced through CSS custom properties (var(--aksharamukha-X,
+// default)), not hardcoded, so an embedding site can restyle the widget by
+// setting these on :root (or any ancestor of <body>) in its own
+// stylesheet - custom properties inherit normally regardless of which
+// <style> tag declared the rule using them - without forking this file.
+// Documented in README-v5-plugin.md's "Theming" section.
 var PANEL_CSS = '\n' +
   '#aksharamukha-navbar, #aksharamukha-navbar * { box-sizing: border-box; }\n' +
-  '#aksharamukha-navbar { position: fixed; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; width: 220px; padding: 14px 16px 12px; border-radius: 12px; background: #fff; border: 1px solid #e7e8ee; box-shadow: 0 4px 18px rgba(20,20,40,.08); z-index: 1000; }\n' +
+  '#aksharamukha-navbar { position: fixed; font-family: var(--aksharamukha-font, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif); width: 220px; padding: 14px 16px 12px; border-radius: var(--aksharamukha-radius, 12px); background: var(--aksharamukha-bg, #fff); border: 1px solid var(--aksharamukha-border, #e7e8ee); box-shadow: 0 4px 18px rgba(20,20,40,.08); z-index: 1000; }\n' +
   '#aksharamukha-navbar.aksharamukha-collapsed { display: none; }\n' +
   '.aksharamukha-logosec { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }\n' +
-  '.aksharamukha-name { font-weight: 600; color: #1f2430; }\n' +
+  '.aksharamukha-name { font-weight: 600; color: var(--aksharamukha-text, #1f2430); }\n' +
   '.aksharamukha-combobox { position: relative; }\n' +
-  '#aksharamukha-select-input { font-family: inherit; width: 100%; padding: 6px 10px; font-size: 13px; color: #1f2430; background: #fff; border: 1px solid #d7dae1; border-radius: 7px; cursor: text; }\n' +
-  '#aksharamukha-select-input:focus { outline: none; border-color: #6c63ff; box-shadow: 0 0 0 3px rgba(108,99,255,.15); }\n' +
-  '#aksharamukha-listbox { position: absolute; left: 0; right: 0; top: calc(100% + 4px); margin: 0; padding: 4px 0; list-style: none; background: #fff; border: 1px solid #e2e4ea; border-radius: 8px; box-shadow: 0 10px 28px rgba(20,20,40,.14); max-height: 220px; overflow-y: auto; z-index: 1001; }\n' +
-  '#aksharamukha-listbox li[role="option"] { padding: 6px 12px; font-size: 13px; color: #1f2430; cursor: pointer; }\n' +
-  '#aksharamukha-listbox li[role="option"]:hover, #aksharamukha-listbox li.is-active { background: #f2f0ff; }\n' +
-  '#aksharamukha-listbox li.is-selected { font-weight: 600; color: #4b3fd6; }\n' +
-  '.aksharamukha-optgroup-label { padding: 8px 12px 2px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: #9aa0ab; }\n' +
-  '.aksharamukha-empty { padding: 8px 12px; font-size: 12px; color: #9aa0ab; }\n' +
-  '#aksharamukha-navbar button { font-family: inherit; font-size: 12px; font-weight: 500; color: #4a4f5c; background: #f4f5f8; border: 1px solid #e2e4ea; border-radius: 6px; padding: 4px 10px; cursor: pointer; margin-top: 8px; }\n' +
-  '#aksharamukha-navbar button:hover { background: #ebe9ff; border-color: #c9c3ff; color: #4b3fd6; }\n' +
+  '#aksharamukha-select-input { font-family: inherit; width: 100%; padding: 6px 10px; font-size: 13px; color: var(--aksharamukha-text, #1f2430); background: var(--aksharamukha-bg, #fff); border: 1px solid #d7dae1; border-radius: 7px; cursor: text; }\n' +
+  '#aksharamukha-select-input:focus { outline: none; border-color: var(--aksharamukha-accent, #6c63ff); box-shadow: 0 0 0 3px var(--aksharamukha-accent-shadow, rgba(108,99,255,.15)); }\n' +
+  '#aksharamukha-listbox { position: absolute; left: 0; right: 0; top: calc(100% + 4px); margin: 0; padding: 4px 0; list-style: none; background: var(--aksharamukha-bg, #fff); border: 1px solid #e2e4ea; border-radius: 8px; box-shadow: 0 10px 28px rgba(20,20,40,.14); max-height: 220px; overflow-y: auto; z-index: 1001; }\n' +
+  '#aksharamukha-listbox li[role="option"] { padding: 6px 12px; font-size: 13px; color: var(--aksharamukha-text, #1f2430); cursor: pointer; }\n' +
+  '#aksharamukha-listbox li[role="option"]:hover, #aksharamukha-listbox li.is-active { background: var(--aksharamukha-accent-tint, #f2f0ff); }\n' +
+  '#aksharamukha-listbox li.is-selected { font-weight: 600; color: var(--aksharamukha-accent-strong, #4b3fd6); }\n' +
+  '.aksharamukha-optgroup-label { padding: 8px 12px 2px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--aksharamukha-text-faint, #9aa0ab); }\n' +
+  '.aksharamukha-empty { padding: 8px 12px; font-size: 12px; color: var(--aksharamukha-text-faint, #9aa0ab); }\n' +
+  '#aksharamukha-navbar button { font-family: inherit; font-size: 12px; font-weight: 500; color: var(--aksharamukha-text-muted, #4a4f5c); background: #f4f5f8; border: 1px solid #e2e4ea; border-radius: 6px; padding: 4px 10px; cursor: pointer; margin-top: 8px; }\n' +
+  '#aksharamukha-navbar button:hover { background: var(--aksharamukha-accent-tint, #ebe9ff); border-color: #c9c3ff; color: var(--aksharamukha-accent-strong, #4b3fd6); }\n' +
   '#options { margin-top: 6px; padding-top: 6px; border-top: 1px solid #edeef2; }\n' +
   '.aksharamukha-chip-row { display: flex; flex-wrap: wrap; gap: 6px; }\n' +
   '.aksharamukha-chip { position: relative; display: inline-flex; align-items: center; }\n' +
   '.aksharamukha-chip input[type="checkbox"] { position: absolute; opacity: 0; width: 1px; height: 1px; overflow: hidden; }\n' +
-  '.aksharamukha-chip label { display: inline-block; padding: 4px 9px; border-radius: 13px; border: 1px solid #d7dae1; background: #f8f8fb; color: #4a4f5c; font-size: 11.5px; line-height: 1.3; cursor: pointer; user-select: none; }\n' +
-  '.aksharamukha-chip input[type="checkbox"]:checked + label { background: #6c63ff; border-color: #6c63ff; color: #fff; }\n' +
-  '.aksharamukha-chip input[type="checkbox"]:focus-visible + label { outline: 2px solid #6c63ff; outline-offset: 1px; }\n' +
+  '.aksharamukha-chip label { display: inline-block; padding: 4px 9px; border-radius: 13px; border: 1px solid #d7dae1; background: #f8f8fb; color: var(--aksharamukha-text-muted, #4a4f5c); font-size: 11.5px; line-height: 1.3; cursor: pointer; user-select: none; }\n' +
+  '.aksharamukha-chip input[type="checkbox"]:checked + label { background: var(--aksharamukha-accent, #6c63ff); border-color: var(--aksharamukha-accent, #6c63ff); color: var(--aksharamukha-accent-contrast, #fff); }\n' +
+  '.aksharamukha-chip input[type="checkbox"]:focus-visible + label { outline: 2px solid var(--aksharamukha-accent, #6c63ff); outline-offset: 1px; }\n' +
   '.aksharamukha-has-example label { cursor: help; text-decoration: underline dotted; text-decoration-color: #b9bfcc; text-underline-offset: 2px; }\n' +
-  '.aksharamukha-tooltip { visibility: hidden; opacity: 0; position: absolute; bottom: 135%; left: 50%; transform: translateX(-50%); background: #1f2430; color: #fff; padding: 6px 8px; border-radius: 6px; font-size: 11px; line-height: 1.5; width: max-content; max-width: 200px; white-space: normal; z-index: 1002; transition: opacity .1s ease; pointer-events: none; }\n' +
+  '.aksharamukha-tooltip { visibility: hidden; opacity: 0; position: absolute; bottom: 135%; left: 50%; transform: translateX(-50%); background: var(--aksharamukha-text, #1f2430); color: #fff; padding: 6px 8px; border-radius: 6px; font-size: 11px; line-height: 1.5; width: max-content; max-width: 200px; white-space: normal; z-index: 1002; transition: opacity .1s ease; pointer-events: none; }\n' +
   '.aksharamukha-chip:hover .aksharamukha-tooltip, .aksharamukha-chip:focus-within .aksharamukha-tooltip { visibility: visible; opacity: 1; }\n' +
   '.aksharamukha-hidedown { display: none; }\n' +
   '.aksharamukha-showup { display: block; }\n' +
-  '#aksharamukha-loading { min-height: 14px; margin-top: 4px; font-size: 11px; color: #8a8f9c; }\n' +
+  '#aksharamukha-loading { min-height: 14px; margin-top: 4px; font-size: 11px; color: var(--aksharamukha-text-faint, #8a8f9c); }\n' +
   '#aksharamukha-error { margin-top: 6px; font-size: 11px; color: #a8352a; }\n' +
-  '#aksharamukha-branding { margin-top: 10px; padding-top: 8px; border-top: 1px solid #edeef2; font-size: 90%; color: #8a8f9c; }\n' +
-  'a.aksharamukha-hyperlink, a.aksharamukha-hyperlink:visited { text-decoration: none; color: #4a4f5c; }\n' +
-  'a.aksharamukha-hyperlink:hover { color: #6c63ff; }\n' +
+  '#aksharamukha-branding { margin-top: 10px; padding-top: 8px; border-top: 1px solid #edeef2; font-size: 90%; color: var(--aksharamukha-text-faint, #8a8f9c); }\n' +
+  'a.aksharamukha-hyperlink, a.aksharamukha-hyperlink:visited { text-decoration: none; color: var(--aksharamukha-text-muted, #4a4f5c); }\n' +
+  'a.aksharamukha-hyperlink:hover { color: var(--aksharamukha-accent, #6c63ff); }\n' +
   '.aksharamukha-progressbar { height: 3px; border-radius: 2px; background: #eeedf7; overflow: hidden; margin-top: 6px; display: none; }\n' +
   '.aksharamukha-progressbar.active { display: block; }\n' +
-  '.aksharamukha-progressbar div { height: 100%; width: 40%; background: #6c63ff; border-radius: 2px; animation: aksharamukha-indeterminate 1.1s ease-in-out infinite; }\n' +
+  '.aksharamukha-progressbar div { height: 100%; width: 40%; background: var(--aksharamukha-accent, #6c63ff); border-radius: 2px; animation: aksharamukha-indeterminate 1.1s ease-in-out infinite; }\n' +
   '@keyframes aksharamukha-indeterminate { 0% { transform: translateX(-100%); } 100% { transform: translateX(350%); } }\n' +
-  '#aksharamukha-launcher { position: fixed; width: 44px; height: 44px; border-radius: 50%; background: #fff; border: 1px solid #e7e8ee; box-shadow: 0 4px 14px rgba(20,20,40,.15); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 1000; padding: 0; }\n' +
+  '#aksharamukha-launcher { position: fixed; width: 44px; height: 44px; border-radius: 50%; background: var(--aksharamukha-bg, #fff); border: 1px solid var(--aksharamukha-border, #e7e8ee); box-shadow: 0 4px 14px rgba(20,20,40,.15); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 1000; padding: 0; }\n' +
   '#aksharamukha-launcher:hover { box-shadow: 0 6px 18px rgba(20,20,40,.22); }\n' +
   '#aksharamukha-launcher.aksharamukha-collapsed { display: none; }\n' +
-  '#aksharamukha-launcher.is-loading::after { content: ""; position: absolute; inset: -3px; border-radius: 50%; border: 2px solid transparent; border-top-color: #6c63ff; border-right-color: #6c63ff; animation: aksharamukha-spin .8s linear infinite; }\n' +
+  '#aksharamukha-launcher.is-loading::after { content: ""; position: absolute; inset: -3px; border-radius: 50%; border: 2px solid transparent; border-top-color: var(--aksharamukha-accent, #6c63ff); border-right-color: var(--aksharamukha-accent, #6c63ff); animation: aksharamukha-spin .8s linear infinite; }\n' +
   '@keyframes aksharamukha-spin { to { transform: rotate(360deg); } }\n' +
   '@media print { .aksharamukha-printhide { display: none !important; } }\n'
 
@@ -4703,6 +4709,14 @@ function updateURL (target) {
 }
 
 function init () {
+  // Guards against the script being included twice on the same page (an
+  // easy copy-paste mistake, or a CMS plugin/theme both adding it) -
+  // without this, a second run would build a second panel/launcher and
+  // register every element a second time.
+  if (document.getElementById('aksharamukha-navbar')) {
+    console.warn('Aksharamukha plugin: already initialized on this page - ignoring a duplicate <script> inclusion.')
+    return
+  }
   Content.collect()
   var restoredTarget = Panel.build()
   Panel.setOnSelectChanged(runConversion)

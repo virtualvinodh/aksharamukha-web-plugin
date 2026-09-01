@@ -1,0 +1,12 @@
+{
+  "name": "aksharamukha-web-plugin",
+  "private": true,
+  "description": "Embeddable script-conversion widget for web pages. See README-v5-plugin.md.",
+  "scripts": {
+    "build": "node build-scripts/build-web-plugin-v5.js",
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.47.0"
+  }
+}

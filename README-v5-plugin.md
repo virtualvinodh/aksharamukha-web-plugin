@@ -69,6 +69,35 @@ All parameters go on the `<script src="...">` URL itself, e.g.
 <script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@v5.0.1/aksharamukha-v5.js?position=bottom-left&offset=60"></script>
 ```
 
+## Theming
+
+The panel's colors/font aren't hardcoded - they're read through CSS custom
+properties with sensible defaults, so a host page can restyle the widget
+from its own stylesheet without forking this file. Custom properties
+inherit normally regardless of which `<style>` tag declared the rule that
+uses them, so setting these on `:root` (or any ancestor of `<body>`) in
+the page's own CSS is enough - no `!important`, no targeting the
+plugin's internal selectors:
+
+```css
+:root {
+  --aksharamukha-accent: #0d9488;         /* checked chips, links, focus rings, spinner */
+  --aksharamukha-accent-contrast: #fff;   /* text color on top of --aksharamukha-accent */
+  --aksharamukha-accent-tint: #e6f5f3;    /* light hover backgrounds */
+  --aksharamukha-accent-strong: #0f766e;  /* darker accent text (selected option, button hover text) */
+  --aksharamukha-bg: #fff;                /* panel/launcher/listbox background */
+  --aksharamukha-border: #e7e8ee;         /* panel/launcher border */
+  --aksharamukha-radius: 12px;            /* panel corner radius */
+  --aksharamukha-text: #1f2430;           /* primary text */
+  --aksharamukha-text-muted: #4a4f5c;     /* secondary text (chip labels, buttons) */
+  --aksharamukha-text-faint: #8a8f9c;     /* tertiary text (branding, loading state) */
+  --aksharamukha-font: Georgia, serif;    /* panel font stack */
+}
+```
+
+Every property has a default baked in (shown above), so you only need to
+set the ones you actually want to change.
+
 ## Per-element markup
 
 Mixed-source pages can override the source script and pre-options per
@@ -93,6 +122,20 @@ currently selected - no rescan or re-init needed.
 - Must be served over HTTP, not opened as a `file://` page - WASM
   instantiation is blocked under `file://` in most browsers. From this
   folder: `python -m http.server 8000`, then open `http://localhost:8000/demo-v5.html`.
+
+## Tests
+
+`npm install && npm test` runs the Playwright suite in `tests/` against
+`demo-v5-api.html` (`engine=api` - no WASM cold start, keeps the suite
+fast; the committed `wasm/` isn't exercised by these tests). It spins up
+its own static file server (`tests/static-server.js`) automatically, the
+same way `python -m http.server` does for manual testing, so no separate
+setup is needed - just `npm test`.
+
+These are integration tests, not isolated unit tests: they hit the live
+hosted API (`aksharamukha-plugin.appspot.com`) for every conversion, so a
+transient issue with that service (not this repo) can fail a run. Runs
+automatically on every push/PR via `.github/workflows/ci.yml`.
 
 ## Build pipeline (spans two repos)
 
