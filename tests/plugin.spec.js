@@ -234,6 +234,44 @@ test('engine=auto routes large text to WASM, not the API', async ({ page }) => {
   expect(apiRequests.length).toBe(0)
 })
 
+test('output font class beats a lang-keyed host rule and a <pre> UA default', async ({ page }) => {
+  // Regression: a host page's own CSS commonly keys font choices off
+  // lang="..." (correct for the original text), and <pre>/<code> carry a
+  // direct browser-default font-family (monospace). Both are DIRECT rules
+  // on a descendant, which always beats a font-family merely INHERITED
+  // from the outputClass we add to the outer wrapped element - so without
+  // stripping the stale lang and mirroring the class onto <pre>/<code>,
+  // the requested font silently never shows on real-world markup like
+  // sanskritdocuments.org's <pre lang="sa"><h2>...</h2></pre> verse layout.
+  await page.goto(DEMO)
+  await page.setContent(`
+    <!DOCTYPE html><html><head><meta charset="utf-8"/>
+    <style>
+      *[lang="sa"] { font-family: "Shobhika", serif; }
+      .granthapandya { font-family: "e-Pandya", cursive !important; }
+    </style></head>
+    <body><pre class="aksharamukha-text"><h2 lang="sa">नमस्ते</h2></pre>
+    <script src="/aksharamukha-v5.js?engine=api&source=Devanagari"></script></body></html>
+  `, { waitUntil: 'load' })
+  await selectScript(page, 'Grantha (Pandya)')
+  await expect(page.locator('h2')).not.toHaveText('नमस्ते', { timeout: 15000 })
+  const info = await page.evaluate(() => {
+    const h2 = document.querySelector('h2')
+    const pre = document.querySelector('pre')
+    return {
+      h2Lang: h2.getAttribute('lang'),
+      h2Font: getComputedStyle(h2).fontFamily,
+      preClass: pre.className
+    }
+  })
+  expect(info.h2Lang).toBeNull()
+  expect(info.h2Font).toContain('e-Pandya')
+  expect(info.preClass).toContain('granthapandya')
+
+  await selectScript(page, 'Original script')
+  await expect(page.locator('h2')).toHaveAttribute('lang', 'sa')
+})
+
 test('?offset=0 is honored, not silently replaced by the default', async ({ page }) => {
   // Regression: offset used `parseInt(...) || 20`, and 0 is falsy in JS,
   // so an explicit ?offset=0 (a legitimate "flush against the edge"

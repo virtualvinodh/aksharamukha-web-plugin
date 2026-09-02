@@ -3943,9 +3943,44 @@ var Content = (function () {
     return texts
   }
 
+  // A host page's own CSS commonly keys font choices off a lang attribute
+  // (e.g. sanskritdocuments.org's *[lang="sa"] { font-family: Shobhika }).
+  // That's correct for the original text, but once converted to a different
+  // script the outputClass we add to `el` (e.g. .granthapandya, meant to
+  // pull in the matching web font) is inherited - and a lang-keyed rule
+  // matching one of el's own descendants directly always beats an inherited
+  // value, regardless of !important, since a direct match on the element
+  // itself outranks inheritance from an ancestor. Left in place, the stale
+  // lang attribute silently wins and the requested font never shows.
+  // Stripping it while converted (and restoring it for "Original") keeps
+  // the host page's own styling correct in both states.
+  function captureLangs (el) {
+    var withLang = el.hasAttribute && el.hasAttribute('lang') ? [el] : []
+    if (el.querySelectorAll) withLang = withLang.concat(Array.prototype.slice.call(el.querySelectorAll('[lang]')))
+    return withLang.map(function (node) { return { node: node, lang: node.getAttribute('lang') } })
+  }
+
+  // <pre> and <code> carry their own direct browser-default font-family
+  // (monospace) - a direct rule on the element itself, not merely inherited
+  // - so it beats whatever outputClass is inherited from an ancestor for
+  // the exact same reason lang does above. Verse/poetry text wrapped in
+  // <pre> for whitespace preservation is common enough (e.g. this is what
+  // actually broke on sanskritdocuments.org) that it needs the same
+  // outputClass applied directly to these descendants, not just to `el`.
+  function captureFontCarriers (el) {
+    var carriers = el.matches && el.matches('pre, code') ? [el] : []
+    if (el.querySelectorAll) carriers = carriers.concat(Array.prototype.slice.call(el.querySelectorAll('pre, code')))
+    return carriers
+  }
+
   function register (el) {
     if (registry.has(el)) return
-    registry.set(el, { texts: captureTexts(el), appliedOutputClass: '' })
+    registry.set(el, {
+      texts: captureTexts(el),
+      appliedOutputClass: '',
+      langs: captureLangs(el),
+      fontCarriers: captureFontCarriers(el)
+    })
     elements.push(el)
   }
 
@@ -4022,7 +4057,17 @@ var Content = (function () {
     }
     if (outputClassOld && outputClassOld !== outputClass) el.classList.remove(outputClassOld)
     if (outputClass) el.classList.add(outputClass)
-    if (entry) entry.appliedOutputClass = outputClass || ''
+    if (entry) {
+      entry.appliedOutputClass = outputClass || ''
+      entry.langs.forEach(function (rec) {
+        if (outputClass) rec.node.removeAttribute('lang')
+        else rec.node.setAttribute('lang', rec.lang)
+      })
+      entry.fontCarriers.forEach(function (carrier) {
+        if (outputClassOld && outputClassOld !== outputClass) carrier.classList.remove(outputClassOld)
+        if (outputClass) carrier.classList.add(outputClass)
+      })
+    }
   }
 
   function parseJsonOrArray (raw) {
