@@ -1215,17 +1215,33 @@ function init () {
   // script is currently selected as soon as they show up, instead of
   // silently being invisible to a one-time page scan.
   Content.observe(convertNewElement)
+  // Always warm the WASM engine in the background during browser idle
+  // time, regardless of whether a conversion just ran - engine=auto's
+  // size-based routing means a small-text page's first (and every
+  // subsequent) conversion goes via the API and never touches
+  // initWasm() on its own. Without this, a returning visitor would keep
+  // paying a network round-trip per conversion for the entire session
+  // even once WASM would have been free. This way: the FIRST conversion
+  // is never blocked on a ~15-20s cold start (API answers immediately),
+  // but it's booting in the background regardless, so by the time a
+  // SECOND conversion is requested it's very likely already ready and
+  // convertAll() picks it up automatically (see the `!wasmReadyPromise`
+  // check there) - instant and offline from then on. Harmless if the
+  // visitor never converts again, or if engine=api forces API-only
+  // (warmUp() itself no-ops in that case).
+  var scheduleIdle = window.requestIdleCallback || function (fn) { setTimeout(fn, 1500) }
   if (restoredTarget) {
     runConversion()
+    // A real conversion is already showing (or about to show) correct
+    // results via the API - surfacing this background boot's own
+    // "Loading transliteration engine…" progress on the panel would
+    // read as something being wrong/stuck even though the visible
+    // content is already complete, so it stays silent here.
+    scheduleIdle(function () { Engine.warmUp() })
   } else {
-    // No target picked yet: warm the WASM engine in the background during
-    // browser idle time, so the ~15-20s cold start happens while the
-    // visitor is still reading the page rather than after they've picked a
-    // script and are staring at the panel waiting. Harmless if they never
-    // interact - the engine just never gets used. Skipped when a target
-    // was restored above, since runConversion() already triggers the
-    // exact same warm-up as a side effect of that real conversion.
-    var scheduleIdle = window.requestIdleCallback || function (fn) { setTimeout(fn, 1500) }
+    // Nothing converted yet - the panel is open with nothing else going
+    // on, so showing this progress is the only loading feedback the
+    // visitor gets while waiting to pick something.
     scheduleIdle(function () {
       Engine.warmUp(function (msg) { Panel.setLoading(!!msg, msg) })
     })

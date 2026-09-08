@@ -276,6 +276,46 @@ test('output font class beats a lang-keyed host rule and a <pre> UA default', as
   await expect(page.locator('h2')).toHaveAttribute('lang', 'sa')
 })
 
+test('after a small conversion goes via the API, WASM still warms up in the background for later picks', async ({ page }) => {
+  // Regression: engine=auto's size-based routing means a small-text page's
+  // conversions all go via the API and never call initWasm() on their own
+  // - warmUp() used to only be scheduled when NO target had been restored
+  // yet, on the (now-false) assumption that a real conversion always
+  // triggers the same warm-up as a side effect. Without an unconditional
+  // background warm-up, a visitor would keep paying a network round-trip
+  // per conversion for the whole session even once WASM would have been
+  // free. This confirms: first pick goes via the API (no wait), and a
+  // later pick - once the background boot has had time to finish - uses
+  // WASM automatically, with no further API calls.
+  // Headless Chromium's requestIdleCallback can fire almost immediately,
+  // which would race the background warm-up against this test's own first
+  // selectScript() call and make even the FIRST pick use WASM - delaying
+  // it a few seconds keeps the two deterministically ordered without
+  // disabling the warm-up outright (unlike the size-routing test above,
+  // which isn't trying to observe it happening at all).
+  await page.addInitScript(() => {
+    window.requestIdleCallback = function (fn) { setTimeout(fn, 3000) }
+  })
+  const apiRequests = []
+  await page.route('https://aksharamukha-plugin.appspot.com/api/plugin', route => {
+    apiRequests.push(route.request())
+    route.continue()
+  })
+  await page.goto('/demo-v5.html')
+  await selectScript(page, 'Tamil')
+  await expect(page.locator('.aksharamukha-text').first()).toContainText('நமஸ்தே', { timeout: 15000 })
+  expect(apiRequests.length).toBeGreaterThan(0)
+
+  // Generous margin over the ~4-9s cold boots measured elsewhere in this
+  // suite, so this isn't flaky on a slower CI runner.
+  await page.waitForTimeout(15000)
+  apiRequests.length = 0
+
+  await selectScript(page, 'Telugu')
+  await expect(page.locator('.aksharamukha-text').first()).toContainText('నమస్తే', { timeout: 15000 })
+  expect(apiRequests.length).toBe(0)
+})
+
 test('?offset=0 is honored, not silently replaced by the default', async ({ page }) => {
   // Regression: offset used `parseInt(...) || 20`, and 0 is falsy in JS,
   // so an explicit ?offset=0 (a legitimate "flush against the edge"
