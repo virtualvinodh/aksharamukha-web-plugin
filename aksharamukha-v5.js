@@ -4346,10 +4346,14 @@ var Panel = (function () {
     // Square" or "Meetei Mayek" that everyone would recognize) whenever a
     // real target is selected, so a visitor can see what's currently
     // displayed at a glance without expanding the panel - on any device,
-    // not just on hover, which a tooltip alone wouldn't cover. Empty for
-    // "Original script": that state doesn't need announcing.
-    els.launcherLabel.textContent = (value !== 'Original' && match) ? match.label : ''
-    els.launcher.classList.toggle('aksharamukha-has-label', value !== 'Original' && !!match)
+    // not just on hover, which a tooltip alone wouldn't cover. For
+    // "Original script" the label reads "Change script" instead of being
+    // left blank - a bare icon with no text gives a first-time visitor no
+    // hint that it's interactive at all (this is what v3/v4's old
+    // "Displaying in X / Change script" indicator communicated, and site
+    // owners relying on that wording noticed its absence).
+    els.launcherLabel.textContent = value !== 'Original' && match ? match.label : 'Change script'
+    els.launcher.classList.add('aksharamukha-has-label')
     closeListbox()
     // Deliberately does NOT auto-collapse the panel on a pick: someone
     // comparing scripts or fine-tuning post-options wants to keep making

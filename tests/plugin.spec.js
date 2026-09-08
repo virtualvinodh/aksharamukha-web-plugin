@@ -58,7 +58,11 @@ test('return visit with a saved target starts collapsed to the badge', async ({ 
   await expect(page.locator('#aksharamukhaselect')).toHaveValue('Tamil')
 })
 
-test('launcher badge shows the current script name, not an abbreviation, and clears for Original', async ({ page }) => {
+test('launcher badge shows the current script name, not an abbreviation, and "Change script" for Original', async ({ page }) => {
+  // Regression: the badge used to go blank for "Original script", leaving
+  // a bare icon with no text - no hint to a first-time visitor that it's
+  // interactive at all. It should read "Change script" in that state
+  // instead (the closest equivalent to v3/v4's old indicator wording).
   await page.goto(DEMO)
   await selectScript(page, 'Kannada')
   await expect(page.locator('.aksharamukha-text').first()).toContainText('ನಮಸ್ತೇ', { timeout: 15000 })
@@ -67,8 +71,8 @@ test('launcher badge shows the current script name, not an abbreviation, and cle
   await expect(page.locator('#aksharamukha-launcher')).toHaveClass(/aksharamukha-has-label/)
 
   await selectScript(page, 'Original script')
-  await expect(page.locator('#aksharamukha-launcher-label')).toHaveText('')
-  await expect(page.locator('#aksharamukha-launcher')).not.toHaveClass(/aksharamukha-has-label/)
+  await expect(page.locator('#aksharamukha-launcher-label')).toHaveText('Change script')
+  await expect(page.locator('#aksharamukha-launcher')).toHaveClass(/aksharamukha-has-label/)
 })
 
 test('"Original script" reverts converted text back to the source', async ({ page }) => {
