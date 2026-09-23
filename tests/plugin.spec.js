@@ -153,6 +153,54 @@ test('after a pick the cursor leaves the box; reopening gives an empty search wi
   await expect(page.locator('#aksharamukhaselect')).toHaveValue('Tamil')
 })
 
+test('scripts that convert the separator comma (Urdu, Hiragana) still convert the page', async ({ page }) => {
+  // Regression: these targets turn the comma between the JSON array items
+  // into "،" / "、", the parse failed, and the raw string got written into
+  // the page one character per text node (the page showed `[`, `"`, ...).
+  await page.goto(DEMO)
+  const first = page.locator('.aksharamukha-text').first()
+
+  await selectScript(page, 'Urdu')
+  await expect(first).toContainText(/^\s*[؀-ۿ]/, { timeout: 15000 })
+  await expect(first).not.toContainText('[')
+  await expect(page.locator('#aksharamukha-error')).toBeHidden()
+
+  await selectScript(page, 'Japanese (Hiragana)')
+  await expect(first).toContainText(/^\s*[぀-ゟ]/, { timeout: 15000 })
+  await expect(first).not.toContainText('[')
+  await expect(page.locator('#aksharamukha-error')).toBeHidden()
+})
+
+test('any separator between converted items is tolerated; an unusable result leaves the text unchanged', async ({ page }) => {
+  // Fakes the API so every separator style is covered regardless of what
+  // the live converter happens to do today.
+  let separator = '،'
+  await page.route('https://aksharamukha-plugin.appspot.com/api/plugin', route => {
+    const texts = JSON.parse(route.request().postDataJSON().text)
+    const body = separator === null
+      ? 'Internal Server Error'
+      : '[' + texts.map((t, i) => JSON.stringify('item' + i + '، "q"')).join(' ' + separator + ' ') + ']'
+    route.fulfill({ status: 200, contentType: 'text/plain', body })
+  })
+  await page.goto(DEMO)
+  const first = page.locator('.aksharamukha-text').first()
+  const original = await first.innerText()
+
+  for (const [sep, label] of [['،', 'Tamil'], ['、', 'Telugu'], [',', 'Kannada']]) {
+    separator = sep
+    await selectScript(page, label)
+    // The comma and quotes inside the text itself come through as-is.
+    await expect(first).toHaveText('item0، "q"')
+  }
+
+  separator = null
+  await selectScript(page, 'Original script')
+  await expect(first).toHaveText(original)
+  await selectScript(page, 'Malayalam')
+  await expect(page.locator('#aksharamukha-error')).toBeVisible()
+  await expect(first).toHaveText(original)
+})
+
 test('a post-option checkbox toggles and changes the converted output', async ({ page }) => {
   await page.goto(DEMO)
   await selectScript(page, 'Tamil')

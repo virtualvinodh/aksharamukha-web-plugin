@@ -449,8 +449,14 @@ var Content = (function () {
     return { source: source, preOptions: preOptions }
   }
 
+  // Returns false (and leaves the element untouched) if `texts` isn't one
+  // converted string per original text node - writing anything else in
+  // would scramble the page, e.g. a raw string gets spread across the text
+  // nodes one character each.
   function applyResult (el, texts, outputClass) {
     var entry = registry.get(el)
+    var expected = entry ? entry.texts.length : captureTexts(el).length
+    if (!Array.isArray(texts) || texts.length !== expected) return false
     var outputClassOld = entry ? entry.appliedOutputClass : ''
     var walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null, false)
     var node
@@ -473,10 +479,35 @@ var Content = (function () {
         if (outputClass) carrier.classList.add(outputClass)
       })
     }
+    return true
   }
 
-  function parseJsonOrArray (raw) {
-    try { return JSON.parse(raw) } catch (e) { return raw }
+  // Each element's text nodes go through the converter as one JSON array
+  // string. Some targets also convert the comma BETWEEN the array items
+  // into their own script's comma - "،" for Urdu, Shahmukhi, Arabic,
+  // Persian, Thaana and Hanifi Rohingya, "、" for Hiragana/Katakana - which
+  // makes the result invalid JSON. The brackets and quotes survive for
+  // every target, so when a plain parse fails, each quoted string is read
+  // out directly and whatever sits between them is ignored. Commas inside
+  // the text itself are left as the converter produced them.
+  function parseConvertedTexts (raw) {
+    try {
+      var parsed = JSON.parse(raw)
+      if (Array.isArray(parsed)) return parsed
+    } catch (e) {}
+    var texts = []
+    var stringLiteral = /"((?:[^"\\]|\\.)*)"/g
+    var match
+    while ((match = stringLiteral.exec(raw))) {
+      try {
+        texts.push(JSON.parse('"' + match[1] + '"'))
+      } catch (e) {
+        // e.g. a raw control character inside the string - JSON.parse
+        // rejects those, but the text itself is still usable as-is.
+        texts.push(match[1])
+      }
+    }
+    return texts.length ? texts : null
   }
 
   return {
@@ -490,7 +521,7 @@ var Content = (function () {
     textsFor: function (el) { var entry = registry.get(el); return entry ? entry.texts : [] },
     sourceForElement: sourceForElement,
     applyResult: applyResult,
-    parseJsonOrArray: parseJsonOrArray
+    parseConvertedTexts: parseConvertedTexts
   }
 })()
 
@@ -1189,13 +1220,18 @@ async function runConversion () {
 
     if (myToken !== State.requestToken) return // superseded by a newer run
 
+    var failed = 0
     results.forEach(function (raw, i) {
       // getOutputClass's 3rd argument is content-dependent (e.g. Vedic
       // accent-mark detection), so it must be computed per element's own
       // result, not once for the whole batch.
       var outputClass = target === 'Original' ? '' : getOutputClass(target, State.postOptionsList, raw)
-      Content.applyResult(targetElements[i], Content.parseJsonOrArray(raw), outputClass)
+      if (!Content.applyResult(targetElements[i], Content.parseConvertedTexts(raw), outputClass)) {
+        failed += 1
+        console.error('Aksharamukha plugin: unexpected conversion result, left this element unchanged', raw)
+      }
     })
+    if (failed) Panel.setError('Part of this page could not be converted to this script.')
 
     State.targetOld = target
     State.postOptionsListOld = State.postOptionsList
@@ -1227,7 +1263,9 @@ async function convertNewElement (el) {
   try {
     var results = await Engine.convertAll([job], {})
     var outputClass = getOutputClass(State.targetOld, State.postOptionsListOld, results[0])
-    Content.applyResult(el, Content.parseJsonOrArray(results[0]), outputClass)
+    if (!Content.applyResult(el, Content.parseConvertedTexts(results[0]), outputClass)) {
+      console.error('Aksharamukha plugin: unexpected conversion result, left this element unchanged', results[0])
+    }
   } catch (e) {
     console.error('Aksharamukha plugin: failed to convert a dynamically added element', e)
   }
