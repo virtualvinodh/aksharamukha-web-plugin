@@ -105,6 +105,54 @@ test('typing a substring that matches multiple options selects the EXACT match, 
   await expect(page.locator('#aksharamukhaselect')).toHaveValue('Arab')
 })
 
+test('after a pick the cursor leaves the box; reopening gives an empty search with the current script highlighted', async ({ page }) => {
+  // Regression: after a pick the box kept focus with the script's name in
+  // it, so typing appended to it ("Tamilk...") and clicking it again did
+  // nothing - the visitor had to click away and back, or clear it by hand.
+  const input = page.locator('#aksharamukha-select-input')
+  const listbox = page.locator('#aksharamukha-listbox')
+  await page.goto(DEMO)
+  await selectScript(page, 'Tamil')
+  await expect(input).not.toBeFocused()
+  await expect(input).toHaveValue('Tamil')
+  await expect(listbox).toBeHidden()
+
+  await input.click()
+  await expect(input).toHaveValue('')
+  await expect(input).toHaveAttribute('placeholder', 'Tamil')
+  await expect(listbox).toBeVisible()
+  const active = listbox.locator('li.is-active')
+  await expect(active).toHaveText('Tamil')
+  const activeIsScrolledIntoView = await active.evaluate(li => {
+    const a = li.getBoundingClientRect()
+    const b = li.parentElement.getBoundingClientRect()
+    return a.top >= b.top && a.bottom <= b.bottom
+  })
+  expect(activeIsScrolledIntoView).toBe(true)
+
+  // Enter with the preselected option keeps it and closes.
+  await page.keyboard.press('Enter')
+  await expect(listbox).toBeHidden()
+  await expect(input).toHaveValue('Tamil')
+  await expect(input).not.toBeFocused()
+
+  // Typing then clearing then Enter must not fall through to "Original".
+  await input.click()
+  await input.fill('Tel')
+  await input.fill('')
+  await page.keyboard.press('Enter')
+  await expect(page.locator('#aksharamukhaselect')).toHaveValue('Tamil')
+  await expect(input).toHaveValue('Tamil')
+
+  // Escape abandons a half-typed search and restores the current name.
+  await input.click()
+  await input.fill('Tel')
+  await page.keyboard.press('Escape')
+  await expect(input).toHaveValue('Tamil')
+  await expect(input).toHaveAttribute('placeholder', 'Search scripts…')
+  await expect(page.locator('#aksharamukhaselect')).toHaveValue('Tamil')
+})
+
 test('a post-option checkbox toggles and changes the converted output', async ({ page }) => {
   await page.goto(DEMO)
   await selectScript(page, 'Tamil')

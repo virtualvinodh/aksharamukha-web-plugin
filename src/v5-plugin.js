@@ -620,7 +620,7 @@ var Panel = (function () {
       '<button type="button" id="aksharamukha-pluginhidebutton"><small>Hide</small></button>' +
       '</div>' +
       '<div class="aksharamukha-combobox">' +
-      '<input type="text" id="aksharamukha-select-input" autocomplete="off" spellcheck="false" placeholder="Search scripts…" ' +
+      '<input type="text" id="aksharamukha-select-input" autocomplete="off" spellcheck="false" placeholder="' + SEARCH_PLACEHOLDER + '" ' +
       'role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="aksharamukha-listbox"/>' +
       '<input type="hidden" id="aksharamukhaselect" name="scriptinput"/>' +
       '<ul id="aksharamukha-listbox" role="listbox" hidden></ul>' +
@@ -664,7 +664,10 @@ var Panel = (function () {
     root.addEventListener('keydown', onRootKeydown)
     els.hideButton.addEventListener('click', hide)
     launcher.addEventListener('click', show)
-    els.searchInput.addEventListener('focus', function () { openListbox(els.searchInput.value === currentLabel() ? '' : els.searchInput.value) })
+    els.searchInput.addEventListener('focus', openFresh)
+    // Focus alone doesn't cover a click on the box while it already has
+    // focus (e.g. after Escape), which should reopen the list too.
+    els.searchInput.addEventListener('click', function () { if (els.listbox.hidden) openFresh() })
     // mousedown (not click) fires before the search input's blur, so the
     // option gets selected before the listbox would otherwise close itself.
     els.listbox.addEventListener('mousedown', onListboxMouseDown)
@@ -687,6 +690,7 @@ var Panel = (function () {
 
   var optionsData = []
   var activeOptionId = null
+  var SEARCH_PLACEHOLDER = 'Search scripts…'
 
   function currentLabel () {
     var match = optionsData.filter(function (o) { return o.value === els.select.value })[0]
@@ -718,13 +722,52 @@ var Panel = (function () {
     els.searchInput.setAttribute('aria-expanded', 'true')
   }
 
+  // Opening the picker (as opposed to filtering it while typing): the box
+  // empties so a search can be typed straight away, the current script
+  // stays visible as the placeholder, and the full list opens with the
+  // current script highlighted and scrolled into view - arrow keys start
+  // from there, and Enter keeps it.
+  function openFresh () {
+    els.searchInput.value = ''
+    els.searchInput.placeholder = currentLabel() || SEARCH_PLACEHOLDER
+    openListbox('')
+    var current = els.listbox.querySelector('li[role="option"][data-value="' + els.select.value + '"]')
+    if (current) setActive(current, true)
+  }
+
   function closeListbox () {
     els.listbox.hidden = true
     els.searchInput.setAttribute('aria-expanded', 'false')
+    els.searchInput.removeAttribute('aria-activedescendant')
     activeOptionId = null
     // Typing without picking anything reverts to the last real selection,
     // so a half-typed query never gets mistaken for the active script.
     els.searchInput.value = currentLabel()
+    els.searchInput.placeholder = SEARCH_PLACEHOLDER
+    // Leaving the cursor in a box that shows the current script's name
+    // means the next keystroke appends to it ("Tamilk...") rather than
+    // starting a fresh search, and a click on the still-focused box
+    // wouldn't reopen the list either. Also dismisses the on-screen
+    // keyboard on phones once a pick is made.
+    els.searchInput.blur()
+  }
+
+  // Scrolls only the listbox itself, never the host page - scrollIntoView()
+  // would also scroll any scrollable ancestor, including the page.
+  function setActive (li, center) {
+    if (activeOptionId) {
+      var prev = document.getElementById(activeOptionId)
+      if (prev) prev.classList.remove('is-active')
+    }
+    activeOptionId = li.id
+    li.classList.add('is-active')
+    els.searchInput.setAttribute('aria-activedescendant', activeOptionId)
+    var lb = els.listbox
+    var top = li.offsetTop
+    var bottom = top + li.offsetHeight
+    if (center) lb.scrollTop = top - (lb.clientHeight - li.offsetHeight) / 2
+    else if (top < lb.scrollTop) lb.scrollTop = top
+    else if (bottom > lb.scrollTop + lb.clientHeight) lb.scrollTop = bottom - lb.clientHeight
   }
 
   function moveActive (delta) {
@@ -732,14 +775,7 @@ var Panel = (function () {
     if (!opts.length) return
     var idx = opts.findIndex(function (li) { return li.id === activeOptionId })
     idx = (idx + delta + opts.length) % opts.length
-    if (activeOptionId) {
-      var prev = document.getElementById(activeOptionId)
-      if (prev) prev.classList.remove('is-active')
-    }
-    activeOptionId = opts[idx].id
-    opts[idx].classList.add('is-active')
-    opts[idx].scrollIntoView({ block: 'nearest' })
-    els.searchInput.setAttribute('aria-activedescendant', activeOptionId)
+    setActive(opts[idx], false)
   }
 
   function selectValue (value, triggerChange) {
@@ -777,10 +813,15 @@ var Panel = (function () {
 
   function onRootKeydown (event) {
     if (event.target !== els.searchInput) return
-    if (event.key === 'ArrowDown') { event.preventDefault(); if (els.listbox.hidden) openListbox(''); else moveActive(1) } else if (event.key === 'ArrowUp') { event.preventDefault(); if (!els.listbox.hidden) moveActive(-1) } else if (event.key === 'Enter') {
+    if (event.key === 'ArrowDown') { event.preventDefault(); if (els.listbox.hidden) openFresh(); else moveActive(1) } else if (event.key === 'ArrowUp') { event.preventDefault(); if (els.listbox.hidden) openFresh(); else moveActive(-1) } else if (event.key === 'Enter') {
       event.preventDefault()
       if (activeOptionId) {
         selectValue(document.getElementById(activeOptionId).getAttribute('data-value'))
+      } else if (!els.searchInput.value.trim()) {
+        // Empty box, nothing highlighted (e.g. typed then cleared): keep
+        // the current script rather than falling through to the first
+        // visible option, which would silently switch to "Original script".
+        closeListbox()
       } else {
         // Nothing arrow-keyed yet - typing a name and hitting Enter right
         // away is the expected way to use a search field. An exact label
