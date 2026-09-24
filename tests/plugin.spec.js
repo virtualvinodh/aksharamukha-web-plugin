@@ -317,19 +317,72 @@ test('engine=auto routes small text to the API, not a WASM boot', async ({ page 
 })
 
 test('engine=auto routes large text to WASM, not the API', async ({ page }) => {
-  await page.goto('/demo-v5.html')
   const apiRequests = []
   await page.route('https://aksharamukha-plugin.appspot.com/api/plugin', route => {
     apiRequests.push(route.request())
     route.continue()
   })
-  await page.evaluate(() => {
-    const sentence = 'नमस्ते, अक्षरमुखा एक लिपि परिवर्तन उपकरण है। '
-    let text = ''
-    while (new Blob([text]).size < 320 * 1024) text += sentence
-    document.querySelector('.aksharamukha-text').textContent = text
-  })
+  // The large text has to be on the page before the plugin loads - it
+  // captures each element's text once, at start-up.
+  await page.goto(DEMO)
+  const sentence = 'नमस्ते, अक्षरमुखा एक लिपि परिवर्तन उपकरण है। '
+  let text = ''
+  while (Buffer.byteLength(text) < 320 * 1024) text += sentence
+  await page.setContent(`
+    <!DOCTYPE html><html><head><meta charset="utf-8"/></head><body>
+    <p class="aksharamukha-text">${text}</p>
+    <script src="/aksharamukha-v5.js?source=Devanagari"></script></body></html>
+  `, { waitUntil: 'load' })
   await selectScript(page, 'Tamil')
+  await expect(page.locator('.aksharamukha-text').first()).toContainText('நமஸ்தே', { timeout: 30000 })
+  expect(apiRequests.length).toBe(0)
+  // The engine runs in a Web Worker: Pyodide never loads on the page's
+  // own main thread, where its start-up froze the page for seconds.
+  expect(await page.evaluate(() => typeof window.loadPyodide)).toBe('undefined')
+})
+
+test('elements sharing the same settings convert with one API request per page, not one per element', async ({ page }) => {
+  const apiRequests = []
+  await page.route('https://aksharamukha-plugin.appspot.com/api/plugin', route => {
+    apiRequests.push(route.request())
+    route.continue()
+  })
+  await page.goto(DEMO)
+  await page.setContent(`
+    <!DOCTYPE html><html><head><meta charset="utf-8"/></head><body>
+    <p class="aksharamukha-text">नमस्ते</p>
+    <p class="aksharamukha-text">राम <b>कृष्ण</b></p>
+    <p class="aksharamukha-text">शिव</p>
+    <script src="/aksharamukha-v5.js?engine=api&source=Devanagari"></script></body></html>
+  `, { waitUntil: 'load' })
+  await selectScript(page, 'Tamil')
+  const paras = page.locator('.aksharamukha-text')
+  await expect(paras.nth(0)).toHaveText('நமஸ்தே', { timeout: 15000 })
+  // Each element (and each text node within one) gets its own piece of the
+  // combined result back, in order.
+  await expect(paras.nth(1)).toHaveText('ராம க்ருʼஷ்ண')
+  await expect(paras.nth(1).locator('b')).toHaveText('க்ருʼஷ்ண')
+  await expect(paras.nth(2)).toHaveText('ஶிவ')
+  expect(apiRequests.length).toBe(1)
+})
+
+test('a returning visitor whose engine files are already cached converts without the API', async ({ page }) => {
+  // Also covers the first-visit path: the page converts via the API while
+  // the engine downloads into Cache Storage in the background.
+  const apiRequests = []
+  await page.route('https://aksharamukha-plugin.appspot.com/api/plugin', route => {
+    apiRequests.push(route.request())
+    route.continue()
+  })
+  await page.goto('/demo-v5.html')
+  await expect.poll(() => page.evaluate(async () => {
+    const keys = await (await caches.open('aksharamukha-wasm-v1')).keys()
+    return keys.some(r => r.url.includes('/wheel/'))
+  }), { timeout: 60000 }).toBe(true)
+
+  await page.evaluate(() => localStorage.setItem('target', 'Tamil'))
+  apiRequests.length = 0
+  await page.reload()
   await expect(page.locator('.aksharamukha-text').first()).toContainText('நமஸ்தே', { timeout: 30000 })
   expect(apiRequests.length).toBe(0)
 })

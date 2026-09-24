@@ -65,7 +65,12 @@ recognize. Empty (plain icon) for "Original script".
 
 ### `engine`
 
-- **`auto`** (default) - runs the actual transliteration engine client-side via WASM (Pyodide + the real `aksharamukha` Python package). After a one-time ~15-20s download and cold start (started proactively in the background during browser idle time, so it's often already done by the time a visitor interacts), every conversion is instant with no network call. Falls back automatically to the hosted API if the WASM assets fail to load. Best for pages that convert a lot of text, or that should keep working if the hosted API is ever down - but it's a large first-load download (~20MB), so it's not free for a page that only converts a line or two.
+- **`auto`** (default) - runs the actual transliteration engine client-side via WASM (Pyodide + the real `aksharamukha` Python package), in a Web Worker so its start-up and conversions never freeze the page. The engine starts in the background once the page is idle; on a visitor's first page view on a site it's downloaded (~9MB compressed) and saved in the browser's Cache Storage for that site. Routing:
+  - The engine is used whenever that costs no download: it's already running, or its files were saved by an earlier page view (so a returning visitor's pages convert with no API calls at all).
+  - Very large text (over ~300KB) always uses the engine, where it's faster than the API.
+  - Otherwise - a visitor's very first page view, before the engine has finished downloading - the hosted API is used.
+  - If the engine can't run in the browser at all (e.g. a Content-Security-Policy that blocks `blob:` workers), everything falls back to the API.
+- In both engines, elements that share the same settings are converted in **one** call per page, not one per element. Pages using `source=autodetect` (the default) keep one call per element, since detecting the script across a whole mixed-script page at once could guess wrong - set `source=` to get the single call.
 - **`api`** - skips WASM entirely and always calls the hosted API (the same lightweight, networked behavior `v3`/`v4` had). No large download, but every conversion is a network round trip and depends on the API being reachable. Best for pages with light or occasional use, or visitors on slow connections.
 - **`wasm`** - forces the WASM engine with no API fallback. Useful for testing; not recommended for production since a WASM load failure then breaks conversion entirely instead of degrading to the API.
 

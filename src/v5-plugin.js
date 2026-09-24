@@ -111,69 +111,86 @@ function safeLocalStorage () {
 }
 var Storage = safeLocalStorage()
 
+// Text goes through the converter as a JSON array string of text-node
+// contents. Some targets also convert the comma BETWEEN the array items
+// into their own script's comma - "،" for Urdu, Shahmukhi, Arabic,
+// Persian, Thaana and Hanifi Rohingya, "、" for Hiragana/Katakana - which
+// makes the result invalid JSON. The brackets and quotes survive for
+// every target, so when a plain parse fails, each quoted string is read
+// out directly and whatever sits between them is ignored. Commas inside
+// the text itself are left as the converter produced them.
+function parseConvertedTexts (raw) {
+  try {
+    var parsed = JSON.parse(raw)
+    if (Array.isArray(parsed)) return parsed
+  } catch (e) {}
+  var texts = []
+  var stringLiteral = /"((?:[^"\\]|\\.)*)"/g
+  var match
+  while ((match = stringLiteral.exec(raw))) {
+    try {
+      texts.push(JSON.parse('"' + match[1] + '"'))
+    } catch (e) {
+      // e.g. a raw control character inside the string - JSON.parse
+      // rejects those, but the text itself is still usable as-is.
+      texts.push(match[1])
+    }
+  }
+  return texts.length ? texts : null
+}
+
 // ---------------------------------------------------------------------------
 // Engine: converts text, either locally via a WASM Python runtime (Pyodide +
-// the aksharamukha wheel - no network calls after the one-time engine
-// download) or via the hosted HTTP API, as a fallback. Both expose the same
-// async convertAll(jobs) -> string[] shape, where each job is
-// { source, target, text, nativize, preOptions, postOptions }.
+// the aksharamukha wheel, running in a Web Worker - no network calls after
+// the one-time engine download) or via the hosted HTTP API. Both expose the
+// same async convertAll(jobs) -> string[] shape, where each job is
+// { source, target, text, nativize, preOptions, postOptions } and text /
+// each result is a JSON array string of text-node contents.
 // ---------------------------------------------------------------------------
 
-var Engine = (function () {
-  var wasmReadyPromise = null
-  var transliterateModule = null
+// Runs inside the Web Worker. Serialized with toString() and started from a
+// Blob URL (see startWorker below), so it must not reference anything
+// outside itself.
+//
+// Running Pyodide in a worker keeps its start-up (seconds of CPU:
+// compiling the .wasm, starting Python, importing aksharamukha) and every
+// conversion off the page's main thread - on the main thread these froze
+// the host page for up to ~2s at a time, on every page view.
+//
+// Explicit persistent caching for the engine's assets (~20MB: pyodide.asm.wasm,
+// python_stdlib.zip, the core dep wheels, and the aksharamukha wheel), so
+// a returning visitor to THIS site doesn't repeat that download every page
+// load. Not a service worker (impossible here - the assets are typically on
+// a shared CDN, and a service worker can only be registered for the page's
+// own origin) and not the CDN's HTTP cache headers (which browsers now
+// partition per top-level site). Cache Storage is scoped to the embedding
+// site's origin - a Blob-URL worker shares the page's origin - and persists
+// across reloads there regardless of what the CDN sends. Pyodide's own
+// loadPackage()/micropip fetch through plain fetch() in the worker, so a
+// URL-scoped fetch patch covers those fetches too, not just ours.
+function wasmWorkerMain () {
+  var pyodide = null
+  var transliterate = null
+  var readyPromise = null
 
-  // Explicit persistent caching for the WASM engine's assets (~20MB:
-  // pyodide.asm.wasm, python_stdlib.zip, the core dep wheels, and the
-  // aksharamukha wheel itself), so a returning visitor to THIS site
-  // doesn't repeat that download every page load. Two things this is
-  // NOT: it's not a service worker (impossible here anyway - the assets
-  // are typically served from a shared CDN, and a service worker can
-  // only be registered for the page's own origin, not the CDN's), and
-  // it's not relying on the CDN's own HTTP cache headers (which modern
-  // browsers now partition per top-level site, so a shared CDN URL no
-  // longer transparently benefits every site that happens to load it).
-  // Cache Storage, used directly from page script with no service worker
-  // needed, is scoped to the embedding site's own origin and persists
-  // across reloads there regardless of what the CDN sends.
-  //
-  // Pyodide's own loadPackage()/micropip machinery fetches its wheels via
-  // plain fetch() in this same JS realm (Pyodide isn't run in a Worker
-  // here), so a URL-scoped fetch patch - rather than just wrapping our
-  // own direct fetch() calls in installLocalWheel() - is the only way to
-  // cover THOSE fetches too, not just the ~3MB we fetch directly
-  // ourselves. Every other fetch on the host page (or even ours, outside
-  // wasmBase) passes through untouched.
-  var WASM_CACHE_NAME = 'aksharamukha-wasm-v1'
-  var cachingFetchInstalled = false
-
-  function installCachingFetch (baseHref) {
-    if (cachingFetchInstalled || !window.fetch || !window.caches) return
-    cachingFetchInstalled = true
-    var originalFetch = window.fetch.bind(window)
-
-    // Bumping WASM_CACHE_NAME (e.g. on a Pyodide/wheel version upgrade)
-    // starts fresh automatically - drop any previous version's cache
-    // instead of letting it sit unused taking up quota forever.
-    caches.keys().then(function (names) {
+  function installCachingFetch (baseHref, cacheName) {
+    if (!self.fetch || !self.caches) return
+    var originalFetch = self.fetch.bind(self)
+    // Bumping the cache name (e.g. on a Pyodide/wheel version upgrade)
+    // starts fresh - drop any previous version's cache instead of letting
+    // it sit unused taking up quota forever.
+    self.caches.keys().then(function (names) {
       names.forEach(function (name) {
-        if (name.indexOf('aksharamukha-wasm-') === 0 && name !== WASM_CACHE_NAME) caches.delete(name)
+        if (name.indexOf('aksharamukha-wasm-') === 0 && name !== cacheName) self.caches.delete(name)
       })
     }).catch(function () {})
-
-    window.fetch = function (input, init) {
-      // input can be a plain string, a Request (.url), or - this is the
-      // one that was silently falling through uncached before - a URL
-      // object (.href, not .url), which is exactly what Pyodide's own
-      // loadPackage()/micropip pass for most of its wheel and the core
-      // .wasm/.zip fetches. Falling back to String(input) covers
-      // anything else with a sane toString().
+    self.fetch = function (input, init) {
+      // input can be a string, a Request (.url) or a URL object (.href) -
+      // Pyodide's own loaders pass URL objects for most of their fetches.
       var url = typeof input === 'string' ? input : (input && (input.url || input.href || String(input)))
       var method = (init && init.method) || (typeof input !== 'string' && input && input.method) || 'GET'
-      if (!url || method !== 'GET' || url.indexOf(baseHref) !== 0) {
-        return originalFetch(input, init)
-      }
-      return caches.open(WASM_CACHE_NAME).then(function (cache) {
+      if (!url || method !== 'GET' || url.indexOf(baseHref) !== 0) return originalFetch(input, init)
+      return self.caches.open(cacheName).then(function (cache) {
         return cache.match(url).then(function (cached) {
           if (cached) return cached
           return originalFetch(input, init).then(function (response) {
@@ -185,67 +202,175 @@ var Engine = (function () {
     }
   }
 
-  function loadScriptTag (src) {
-    return new Promise(function (resolve, reject) {
-      var el = document.createElement('script')
-      el.src = src
-      el.onload = resolve
-      el.onerror = function () { reject(new Error('Failed to load ' + src)) }
-      document.head.appendChild(el)
-    })
-  }
-
-  async function initWasm (onProgress) {
-    if (wasmReadyPromise) return wasmReadyPromise
-    wasmReadyPromise = (async function () {
-      var base = Config.wasmBase
-      installCachingFetch(base.href)
-      onProgress('Loading transliteration engine…')
-      await loadScriptTag(new URL('pyodide/pyodide.js', base).href)
-      var pyodide = await self.loadPyodide({ indexURL: new URL('pyodide/', base).href })
-      // requests is unconditionally imported at module scope by
-      // aksharamukha/transliterate.py even though this plugin never uses
-      // its network path (Convert_HTML/website features) - it must be
-      // loaded regardless, or the import itself throws.
-      await pyodide.loadPackage(['pyyaml', 'regex', 'requests', 'micropip'])
-      var micropip = pyodide.pyimport('micropip')
-      var localWheels = [
-        'fonttools-4.51.0-py3-none-any.whl',
-        'wrapt-2.4.0-py3-none-any.whl',
-        'deprecated-1.3.1-py2.py3-none-any.whl',
-        'jaconv-0.5.0-py3-none-any.whl',
-        'pykakasi-2.3.0-py3-none-any.whl'
-      ]
-      for (var i = 0; i < localWheels.length; i++) {
-        await installLocalWheel(pyodide, micropip, new URL('pyodide/' + localWheels[i], base).href, localWheels[i])
-      }
-      // The aksharamukha wheel itself lives under wasm/wheel/, not wasm/pyodide/.
-      var aksharamukhaWheelName = 'aksharamukha-2.3-py3-none-any.whl'
-      await installLocalWheel(pyodide, micropip, new URL('wheel/' + aksharamukhaWheelName, base).href, aksharamukhaWheelName)
-      transliterateModule = pyodide.pyimport('aksharamukha.transliterate')
-      onProgress('')
-      return pyodide
-    })()
-    return wasmReadyPromise
-  }
-
-  async function installLocalWheel (pyodide, micropip, url, name) {
-    var resp = await fetch(url)
+  async function installLocalWheel (micropip, url, name) {
+    var resp = await self.fetch(url)
     if (!resp.ok) throw new Error('Failed to fetch ' + url + ' (' + resp.status + ')')
-    var bytes = new Uint8Array(await resp.arrayBuffer())
     var path = '/tmp/' + name
-    pyodide.FS.writeFile(path, bytes)
+    pyodide.FS.writeFile(path, new Uint8Array(await resp.arrayBuffer()))
     await micropip.install.callKwargs('emfs:' + path, { deps: false })
   }
 
-  async function convertOneWasm (job) {
-    await initWasm(job.onProgress || function () {})
-    var kwargs = {
-      nativize: job.nativize,
-      pre_options: job.preOptions || [],
-      post_options: job.postOptions || []
+  async function init (msg) {
+    installCachingFetch(msg.base, msg.cacheName)
+    self.importScripts(new URL('pyodide/pyodide.js', msg.base).href)
+    pyodide = await self.loadPyodide({ indexURL: new URL('pyodide/', msg.base).href })
+    // requests is imported at module scope by aksharamukha/transliterate.py
+    // even though nothing here uses its network features - it must be
+    // loaded regardless, or the import itself throws.
+    await pyodide.loadPackage(['pyyaml', 'regex', 'requests', 'micropip'])
+    // aksharamukha's sources trigger ~60 harmless SyntaxWarnings (invalid
+    // escape sequences in regex strings) as they're compiled, which Pyodide
+    // forwards to the host page's console on every page view.
+    pyodide.runPython("import warnings\nwarnings.filterwarnings('ignore', category=SyntaxWarning)")
+    var micropip = pyodide.pyimport('micropip')
+    for (var i = 0; i < msg.depWheels.length; i++) {
+      await installLocalWheel(micropip, new URL('pyodide/' + msg.depWheels[i], msg.base).href, msg.depWheels[i])
     }
-    return transliterateModule.process.callKwargs(job.source, job.target, job.text, kwargs)
+    // The aksharamukha wheel itself lives under wasm/wheel/, not wasm/pyodide/.
+    await installLocalWheel(micropip, new URL('wheel/' + msg.aksharamukhaWheel, msg.base).href, msg.aksharamukhaWheel)
+    transliterate = pyodide.pyimport('aksharamukha.transliterate')
+  }
+
+  function errorText (err) { return String((err && err.message) || err) }
+
+  self.onmessage = function (event) {
+    var msg = event.data
+    if (msg.type === 'init') {
+      if (!readyPromise) readyPromise = init(msg)
+      readyPromise.then(
+        function () { self.postMessage({ type: 'ready' }) },
+        function (err) { self.postMessage({ type: 'init-error', message: errorText(err) }) }
+      )
+    } else if (msg.type === 'convert') {
+      readyPromise.then(function () {
+        var preOptions = pyodide.toPy(msg.preOptions || [])
+        var postOptions = pyodide.toPy(msg.postOptions || [])
+        try {
+          var result = transliterate.process.callKwargs(msg.source, msg.target, msg.text, {
+            nativize: msg.nativize, pre_options: preOptions, post_options: postOptions
+          })
+          self.postMessage({ type: 'result', id: msg.id, result: result })
+        } catch (err) {
+          self.postMessage({ type: 'result', id: msg.id, error: errorText(err) })
+        } finally {
+          preOptions.destroy()
+          postOptions.destroy()
+        }
+      }, function (err) {
+        self.postMessage({ type: 'result', id: msg.id, error: errorText(err) })
+      })
+    }
+  }
+}
+
+var Engine = (function () {
+  var WASM_CACHE_NAME = 'aksharamukha-wasm-v1'
+  var AKSHARAMUKHA_WHEEL = 'aksharamukha-2.3-py3-none-any.whl'
+  var DEP_WHEELS = [
+    'fonttools-4.51.0-py3-none-any.whl',
+    'wrapt-2.4.0-py3-none-any.whl',
+    'deprecated-1.3.1-py2.py3-none-any.whl',
+    'jaconv-0.5.0-py3-none-any.whl',
+    'pykakasi-2.3.0-py3-none-any.whl'
+  ]
+  // Above this much text, the hosted API's latency (which scales with
+  // payload size) exceeds the engine's fixed start-up cost - measured, the
+  // two cross over around ~350KB of source text.
+  var AUTO_LARGE_TEXT_BYTES = 300 * 1024
+
+  var worker = null
+  var readyPromise = null
+  var ready = false
+  var failed = false
+  var pending = {} // conversion id -> { resolve, reject }
+  var nextId = 1
+  var progressListeners = []
+  var lastProgress = ''
+
+  function wasmUrl (path) { return new URL(path, Config.wasmBase).href }
+
+  function notifyProgress (message) {
+    lastProgress = message
+    progressListeners.forEach(function (fn) { fn(message) })
+  }
+
+  function fail (err) {
+    failed = true
+    ready = false
+    notifyProgress('')
+    progressListeners = []
+    Object.keys(pending).forEach(function (id) { pending[id].reject(err) })
+    pending = {}
+    return err
+  }
+
+  function startWorker () {
+    var source = '(' + wasmWorkerMain.toString() + ')()'
+    return new Worker(URL.createObjectURL(new Blob([source], { type: 'text/javascript' })))
+  }
+
+  function initWasm (onProgress) {
+    if (onProgress && !ready && !failed) {
+      progressListeners.push(onProgress)
+      if (lastProgress) onProgress(lastProgress)
+    }
+    if (readyPromise) return readyPromise
+    readyPromise = new Promise(function (resolve, reject) {
+      try {
+        worker = startWorker()
+      } catch (e) {
+        // e.g. a Content-Security-Policy that doesn't allow blob: workers.
+        reject(fail(e))
+        return
+      }
+      worker.onmessage = function (event) {
+        var msg = event.data
+        if (msg.type === 'ready') {
+          ready = true
+          notifyProgress('')
+          progressListeners = []
+          resolve()
+        } else if (msg.type === 'init-error') {
+          reject(fail(new Error(msg.message)))
+        } else if (msg.type === 'result') {
+          var p = pending[msg.id]
+          delete pending[msg.id]
+          if (p) msg.error ? p.reject(new Error(msg.error)) : p.resolve(msg.result)
+        }
+      }
+      worker.onerror = function (event) {
+        if (event.preventDefault) event.preventDefault()
+        reject(fail(new Error(event.message || 'The conversion engine stopped unexpectedly.')))
+      }
+      notifyProgress('Loading transliteration engine…')
+      worker.postMessage({
+        type: 'init',
+        base: Config.wasmBase.href,
+        cacheName: WASM_CACHE_NAME,
+        depWheels: DEP_WHEELS,
+        aksharamukhaWheel: AKSHARAMUKHA_WHEEL
+      })
+    })
+    return readyPromise
+  }
+
+  async function convertOneWasm (job) {
+    await initWasm(job.onProgress)
+    if (failed) throw new Error('The conversion engine is not available.')
+    return new Promise(function (resolve, reject) {
+      var id = nextId++
+      pending[id] = { resolve: resolve, reject: reject }
+      worker.postMessage({
+        type: 'convert',
+        id: id,
+        source: job.source,
+        target: job.target,
+        text: job.text,
+        nativize: job.nativize,
+        preOptions: job.preOptions || [],
+        postOptions: job.postOptions || []
+      })
+    })
   }
 
   async function convertOneApi (job, signal) {
@@ -266,11 +391,16 @@ var Engine = (function () {
     return res.text()
   }
 
-  // Above this, the hosted API's per-request latency (which scales with
-  // payload size) exceeds the WASM engine's fixed ~9s cold-boot cost -
-  // measured empirically, the two cross over around ~350KB of source text.
-  // Below it, api's near-zero fixed cost wins comfortably.
-  var AUTO_LARGE_TEXT_BYTES = 300 * 1024
+  async function convertOne (job, useWasm, signal) {
+    if (!useWasm) return convertOneApi(job, signal)
+    try {
+      return await convertOneWasm(job)
+    } catch (e) {
+      if (Config.engine === 'wasm') throw e
+      console.warn('Aksharamukha: WASM engine failed, falling back to API.', e)
+      return convertOneApi(job, signal)
+    }
+  }
 
   function totalTextBytes (jobs) {
     var total = 0
@@ -278,42 +408,91 @@ var Engine = (function () {
     return total
   }
 
-  async function convertAll (jobs, options) {
-    options = options || {}
-    var mode = Config.engine
-    if (mode === 'api') {
-      return Promise.all(jobs.map(function (job) { return convertOneApi(job, options.signal) }))
+  // True if an earlier page view on this site already downloaded the
+  // engine into Cache Storage - starting it then needs no download, only
+  // its start-up, which runs in the worker without blocking the page.
+  var filesCachedCheck = null
+  function engineFilesCached () {
+    if (!filesCachedCheck) {
+      filesCachedCheck = !window.caches
+        ? Promise.resolve(false)
+        : caches.open(WASM_CACHE_NAME).then(function (cache) {
+          return Promise.all([
+            cache.match(wasmUrl('pyodide/pyodide.asm.wasm')),
+            cache.match(wasmUrl('wheel/' + AKSHARAMUKHA_WHEEL))
+          ])
+        }).then(function (hits) { return !!(hits[0] && hits[1]) }).catch(function () { return false })
     }
-    // In auto mode, only pay the WASM boot cost for genuinely large text.
-    // If WASM is already booted (e.g. warmUp() finished in the background,
-    // or a previous large conversion on this page already paid the cost),
-    // using it is free regardless of size, so skip straight to it.
-    if (mode === 'auto' && !wasmReadyPromise && totalTextBytes(jobs) < AUTO_LARGE_TEXT_BYTES) {
-      return Promise.all(jobs.map(function (job) { return convertOneApi(job, options.signal) }))
-    }
-    try {
-      return await Promise.all(jobs.map(convertOneWasm))
-    } catch (e) {
-      if (mode === 'wasm') throw e
-      // engine=auto (default 'wasm' with implicit fallback): if the WASM
-      // engine failed to load or run, fall back to the hosted API rather
-      // than breaking the widget on browsers/CDNs that can't serve/execute it.
-      console.warn('Aksharamukha: WASM engine failed, falling back to API.', e)
-      return Promise.all(jobs.map(function (job) { return convertOneApi(job, options.signal) }))
-    }
+    return filesCachedCheck
   }
 
-  function warmUp (onProgress) {
-    // Fire-and-forget: starts the WASM cold start ahead of the user's
-    // first actual selection. initWasm() memoizes on wasmReadyPromise, so
-    // calling this early just means the real conversion request later
-    // awaits an already-in-flight (or already-finished) promise instead of
-    // starting one from scratch - the ~15-20s cold start happens while the
-    // visitor is still reading the page instead of after they've asked for
-    // a conversion and are staring at a spinner.
+  // engine=auto routing. The engine is preferred whenever using it costs no
+  // download - it's already running, or its files were saved by an earlier
+  // page view - to keep conversions off the hosted API. Large text always
+  // goes to the engine, where it's clearly faster. The API is used only
+  // for a visitor's first page view on this site (while the engine
+  // downloads in the background for next time), or if the engine can't
+  // run in this browser at all.
+  async function shouldUseWasm (jobs) {
+    if (Config.engine === 'wasm') return true
+    if (Config.engine === 'api' || failed) return false
+    if (ready) return true
+    if (totalTextBytes(jobs) >= AUTO_LARGE_TEXT_BYTES) return true
+    return engineFilesCached()
+  }
+
+  // Jobs that share the same settings go to the converter as ONE combined
+  // array - one API request (or engine call) per page rather than one per
+  // marked element - and the result is split back per job. Pages set to
+  // autodetect keep one call per element: detecting the script over the
+  // whole page at once could guess wrong for a page mixing scripts.
+  async function convertGroup (group, useWasm, signal) {
+    if (group.length === 1) return [await convertOne(group[0], useWasm, signal)]
+    var pieces = group.map(function (job) { return JSON.parse(job.text) })
+    var combined = Object.assign({}, group[0], { text: JSON.stringify([].concat.apply([], pieces)) })
+    var texts = parseConvertedTexts(await convertOne(combined, useWasm, signal))
+    var expected = pieces.reduce(function (n, p) { return n + p.length }, 0)
+    if (!texts || texts.length !== expected) {
+      // Can't split the combined result back reliably - convert each
+      // element on its own instead.
+      return Promise.all(group.map(function (job) { return convertOne(job, useWasm, signal) }))
+    }
+    var offset = 0
+    return pieces.map(function (p) {
+      var slice = texts.slice(offset, offset + p.length)
+      offset += p.length
+      return JSON.stringify(slice)
+    })
+  }
+
+  async function convertAll (jobs, options) {
+    options = options || {}
+    var useWasm = await shouldUseWasm(jobs)
+    var groups = {}
+    jobs.forEach(function (job, i) {
+      var key = job.source === 'autodetect'
+        ? 'element:' + i
+        : JSON.stringify([job.source, job.target, job.nativize, job.preOptions || [], job.postOptions || []])
+      ;(groups[key] = groups[key] || []).push(i)
+    })
+    var results = new Array(jobs.length)
+    await Promise.all(Object.keys(groups).map(function (key) {
+      var indexes = groups[key]
+      return convertGroup(indexes.map(function (i) { return jobs[i] }), useWasm, options.signal).then(function (converted) {
+        indexes.forEach(function (jobIndex, k) { results[jobIndex] = converted[k] })
+      })
+    }))
+    return results
+  }
+
+  // Fire-and-forget: starts the engine (downloading it on a first visit)
+  // in the background, so it's ready for this page's later conversions and
+  // cached for the next page view. Runs in the worker, so it doesn't block
+  // the page.
+  function warmUp () {
     if (Config.engine === 'api') return
-    initWasm(onProgress || function () {}).catch(function (e) {
-      console.warn('Aksharamukha: background WASM warm-up failed (will retry/fallback on first real use).', e)
+    initWasm().catch(function (e) {
+      console.warn('Aksharamukha: background WASM warm-up failed (conversions will use the API).', e)
     })
   }
 
@@ -480,34 +659,6 @@ var Content = (function () {
       })
     }
     return true
-  }
-
-  // Each element's text nodes go through the converter as one JSON array
-  // string. Some targets also convert the comma BETWEEN the array items
-  // into their own script's comma - "،" for Urdu, Shahmukhi, Arabic,
-  // Persian, Thaana and Hanifi Rohingya, "、" for Hiragana/Katakana - which
-  // makes the result invalid JSON. The brackets and quotes survive for
-  // every target, so when a plain parse fails, each quoted string is read
-  // out directly and whatever sits between them is ignored. Commas inside
-  // the text itself are left as the converter produced them.
-  function parseConvertedTexts (raw) {
-    try {
-      var parsed = JSON.parse(raw)
-      if (Array.isArray(parsed)) return parsed
-    } catch (e) {}
-    var texts = []
-    var stringLiteral = /"((?:[^"\\]|\\.)*)"/g
-    var match
-    while ((match = stringLiteral.exec(raw))) {
-      try {
-        texts.push(JSON.parse('"' + match[1] + '"'))
-      } catch (e) {
-        // e.g. a raw control character inside the string - JSON.parse
-        // rejects those, but the text itself is still usable as-is.
-        texts.push(match[1])
-      }
-    }
-    return texts.length ? texts : null
   }
 
   return {
@@ -1294,37 +1445,16 @@ function init () {
   // script is currently selected as soon as they show up, instead of
   // silently being invisible to a one-time page scan.
   Content.observe(convertNewElement)
-  // Always warm the WASM engine in the background during browser idle
-  // time, regardless of whether a conversion just ran - engine=auto's
-  // size-based routing means a small-text page's first (and every
-  // subsequent) conversion goes via the API and never touches
-  // initWasm() on its own. Without this, a returning visitor would keep
-  // paying a network round-trip per conversion for the entire session
-  // even once WASM would have been free. This way: the FIRST conversion
-  // is never blocked on a ~15-20s cold start (API answers immediately),
-  // but it's booting in the background regardless, so by the time a
-  // SECOND conversion is requested it's very likely already ready and
-  // convertAll() picks it up automatically (see the `!wasmReadyPromise`
-  // check there) - instant and offline from then on. Harmless if the
-  // visitor never converts again, or if engine=api forces API-only
-  // (warmUp() itself no-ops in that case).
+  if (restoredTarget) runConversion()
+  // Start the engine in the background once the page is idle, so it's
+  // ready for this page's later conversions and - on a first visit -
+  // downloaded and cached for the next page view, which can then convert
+  // without the API at all (see Engine's shouldUseWasm). It runs in a
+  // worker, so it doesn't block the page, and it stays silent: whatever
+  // the visitor asked for is already shown by the conversion's own
+  // loading state. A no-op with engine=api.
   var scheduleIdle = window.requestIdleCallback || function (fn) { setTimeout(fn, 1500) }
-  if (restoredTarget) {
-    runConversion()
-    // A real conversion is already showing (or about to show) correct
-    // results via the API - surfacing this background boot's own
-    // "Loading transliteration engine…" progress on the panel would
-    // read as something being wrong/stuck even though the visible
-    // content is already complete, so it stays silent here.
-    scheduleIdle(function () { Engine.warmUp() })
-  } else {
-    // Nothing converted yet - the panel is open with nothing else going
-    // on, so showing this progress is the only loading feedback the
-    // visitor gets while waiting to pick something.
-    scheduleIdle(function () {
-      Engine.warmUp(function (msg) { Panel.setLoading(!!msg, msg) })
-    })
-  }
+  scheduleIdle(function () { Engine.warmUp() })
 }
 
 if (document.readyState === 'loading') {
