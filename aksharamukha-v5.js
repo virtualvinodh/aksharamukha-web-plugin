@@ -4443,6 +4443,7 @@ var Panel = (function () {
     root.addEventListener('change', onRootInput)
     root.addEventListener('click', onRootInput)
     root.addEventListener('keydown', onRootKeydown)
+    root.addEventListener('click', onInfoClick)
     // Only the visitor's own clicks are remembered - not the automatic
     // open on a first visit below.
     els.hideButton.addEventListener('click', function () { hide(); Storage.set(HIDDEN_KEY, 'true') })
@@ -4455,7 +4456,9 @@ var Panel = (function () {
     // option gets selected before the listbox would otherwise close itself.
     els.listbox.addEventListener('mousedown', onListboxMouseDown)
     document.addEventListener('click', function (event) {
-      if (!root.contains(event.target)) closeListbox()
+      if (root.contains(event.target)) return
+      closeListbox()
+      closeExamples()
     })
 
     // Open straight to the panel while the visitor is on the original
@@ -4466,7 +4469,7 @@ var Panel = (function () {
     // picked a script starts collapsed behind the badge, which shows it.
     var onOriginal = !restoredTarget || restoredTarget === 'Original'
     var hiddenByVisitor = Storage.get(HIDDEN_KEY) === 'true'
-    var narrowScreen = window.matchMedia && window.matchMedia('(max-width: ' + NARROW_SCREEN_PX + 'px)').matches
+    var narrowScreen = window.matchMedia && window.matchMedia(PHONE_MEDIA_QUERY).matches
     if (onOriginal && !hiddenByVisitor && !narrowScreen) show()
 
     return restoredTarget
@@ -4475,9 +4478,11 @@ var Panel = (function () {
   // Same key v3 used, so a visitor who hid the v3 widget on a site keeps
   // that choice after the site moves to v5.
   var HIDDEN_KEY = 'hidePlugin'
-  // The open panel is 220px wide plus margins: below this it covers a
-  // good part of a phone's screen.
-  var NARROW_SCREEN_PX = 640
+  // The open panel is 220px wide plus margins: under 640px it covers a good
+  // part of the screen. The touch-screen clause catches phones and tablets
+  // on pages without <meta name="viewport">, which phones lay out ~980px
+  // wide (so the width test alone never matches) and then zoom out.
+  var PHONE_MEDIA_QUERY = '(max-width: 640px), (hover: none) and (pointer: coarse)'
 
   var optionsData = []
   var activeOptionId = null
@@ -4730,10 +4735,47 @@ var Panel = (function () {
     var html = '<span class="aksharamukha-chip' + (example ? ' aksharamukha-has-example' : '') + '">' +
       '<input type="checkbox" name="aksharamukha-optionpost" id="' + id + '" value="' + value + '"' + (checked ? ' checked' : '') + '/>' +
       '<label for="' + id + '">' + name + '</label>'
-    if (example) {
-      html += '<span class="aksharamukha-tooltip" role="tooltip">' + example + '</span>'
-    }
+    if (example) html += exampleHtml(example)
     return html + '</span>'
+  }
+
+  // With a mouse, the example shows on hover (or keyboard focus). Touch
+  // screens have no hover, and tapping the option's name switches it on,
+  // so there an "i" button - shown only on touch screens, see PANEL_CSS -
+  // opens the example without changing the option.
+  function exampleHtml (example) {
+    return '<button type="button" class="aksharamukha-info" aria-label="Show example" aria-expanded="false">i</button>' +
+      '<span class="aksharamukha-tooltip" role="tooltip">' + example + '</span>'
+  }
+
+  function onInfoClick (event) {
+    var button = event.target.closest('.aksharamukha-info')
+    var chip = button && button.parentNode
+    var wasOpen = chip && chip.classList.contains('is-open')
+    closeExamples()
+    if (!chip || wasOpen) return
+    chip.classList.add('is-open')
+    button.setAttribute('aria-expanded', 'true')
+    keepOnScreen(chip.querySelector('.aksharamukha-tooltip'))
+  }
+
+  function closeExamples () {
+    Array.prototype.forEach.call(els.root.querySelectorAll('.aksharamukha-chip.is-open'), function (chip) {
+      chip.classList.remove('is-open')
+      chip.querySelector('.aksharamukha-tooltip').style.transform = ''
+      chip.querySelector('.aksharamukha-info').setAttribute('aria-expanded', 'false')
+    })
+  }
+
+  // The example is centred over its chip, which on a phone can push it
+  // past the edge of the screen - shift it back in if so.
+  function keepOnScreen (tooltip) {
+    var margin = 8
+    var rect = tooltip.getBoundingClientRect()
+    var shift = 0
+    if (rect.left < margin) shift = margin - rect.left
+    else if (rect.right > window.innerWidth - margin) shift = window.innerWidth - margin - rect.right
+    if (shift) tooltip.style.transform = 'translateX(calc(-50% + ' + Math.round(shift) + 'px))'
   }
 
   function renderOptions (target, liveChecked, primarySource) {
@@ -4772,7 +4814,7 @@ var Panel = (function () {
       html += '<span class="aksharamukha-chip aksharamukha-has-example">' +
         '<input type="checkbox" id="aksharamukha-preserve"/>' +
         '<label for="aksharamukha-preserve">Preserve source</label>' +
-        '<span class="aksharamukha-tooltip" role="tooltip">' + preserveExample + '</span>' +
+        exampleHtml(preserveExample) +
         '</span>'
     }
     postOptionDefs.forEach(function (opt) {
@@ -4888,6 +4930,13 @@ var PANEL_CSS = '\n' +
   '.aksharamukha-has-example label { cursor: help; text-decoration: underline dotted; text-decoration-color: #b9bfcc; text-underline-offset: 2px; }\n' +
   '.aksharamukha-tooltip { visibility: hidden; opacity: 0; position: absolute; bottom: 135%; left: 50%; transform: translateX(-50%); background: var(--aksharamukha-text, #1f2430); color: #fff; padding: 6px 8px; border-radius: 6px; font-size: 11px; line-height: 1.5; width: max-content; max-width: 200px; white-space: normal; z-index: 1002; transition: opacity .1s ease; pointer-events: none; }\n' +
   '.aksharamukha-chip:hover .aksharamukha-tooltip, .aksharamukha-chip:focus-within .aksharamukha-tooltip { visibility: visible; opacity: 1; }\n' +
+  '#aksharamukha-navbar .aksharamukha-info { display: none; align-items: center; justify-content: center; width: 22px; height: 22px; margin: 0 0 0 3px; padding: 0; border-radius: 50%; font: italic 700 12px/1 Georgia, "Times New Roman", serif; }\n' +
+  '@media (hover: none) {\n' +
+  '  #aksharamukha-navbar .aksharamukha-info { display: inline-flex; }\n' +
+  '  .aksharamukha-chip:hover .aksharamukha-tooltip, .aksharamukha-chip:focus-within .aksharamukha-tooltip { visibility: hidden; opacity: 0; }\n' +
+  '  .aksharamukha-has-example label { cursor: pointer; text-decoration: none; }\n' +
+  '}\n' +
+  '.aksharamukha-chip.is-open .aksharamukha-tooltip { visibility: visible; opacity: 1; }\n' +
   '.aksharamukha-hidedown { display: none; }\n' +
   '.aksharamukha-showup { display: block; }\n' +
   '#aksharamukha-loading { min-height: 14px; margin-top: 4px; font-size: 11px; color: var(--aksharamukha-text-faint, #8a8f9c); }\n' +

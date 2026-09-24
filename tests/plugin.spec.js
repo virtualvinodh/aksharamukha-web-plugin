@@ -1,5 +1,5 @@
 // @ts-check
-const { test, expect } = require('@playwright/test')
+const { test, expect, devices } = require('@playwright/test')
 const { selectScript, openOptions } = require('./helpers')
 
 // engine=api everywhere: no WASM cold start to wait through, keeps this
@@ -252,6 +252,62 @@ test('any separator between converted items is tolerated; an unusable result lea
   await selectScript(page, 'Malayalam')
   await expect(page.locator('#aksharamukha-error')).toBeVisible()
   await expect(first).toHaveText(original)
+})
+
+test.describe('on a touch screen (phone)', () => {
+  // All of a phone's emulation except the browser choice, which can't be
+  // set inside a describe group.
+  const { defaultBrowserType, ...phone } = devices['Pixel 5']
+  test.use(phone)
+
+  test('an "i" button shows an option\'s example without switching the option on', async ({ page }) => {
+    // Regression: examples only showed on hover, which touch screens don't
+    // have - and tapping the option's name switches it on, so there was no
+    // way to see what an option does before turning it on.
+    await page.goto(DEMO)
+    await page.setContent(`
+      <!DOCTYPE html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+      <body><p class="aksharamukha-text" id="text">नमस्ते</p>
+      <script src="/aksharamukha-v5.js?engine=api&source=Devanagari"></script></body></html>
+    `, { waitUntil: 'load' })
+    await expect(page.locator('#aksharamukha-navbar')).toBeHidden() // phones start collapsed
+    await page.tap('#aksharamukha-launcher')
+    await page.tap('#aksharamukha-select-input')
+    await page.fill('#aksharamukha-select-input', 'Tamil')
+    await page.keyboard.press('Enter')
+    await expect(page.locator('#text')).toContainText('நமஸ்தே', { timeout: 15000 })
+    await page.tap('#aksharamukha-more')
+
+    const checkbox = page.locator('#aksharamukha-opt-TamilGranthaVisarga')
+    const chip = page.locator('.aksharamukha-chip', { has: checkbox })
+    const tooltip = chip.locator('.aksharamukha-tooltip')
+    await chip.locator('.aksharamukha-info').tap()
+    await expect(tooltip).toBeVisible()
+    await expect(checkbox).not.toBeChecked()
+    const box = await tooltip.boundingBox()
+    expect(box.x).toBeGreaterThanOrEqual(0)
+    expect(box.x + box.width).toBeLessThanOrEqual(page.viewportSize().width)
+
+    // Tapping elsewhere closes it (an empty spot near the bottom - the open
+    // panel covers the top of a phone screen).
+    await page.touchscreen.tap(10, page.viewportSize().height - 10)
+    await expect(tooltip).toBeHidden()
+
+    await page.tap('label[for="aksharamukha-opt-TamilGranthaVisarga"]')
+    await expect(checkbox).toBeChecked()
+    await expect(tooltip).toBeHidden()
+  })
+})
+
+test('with a mouse, there are no "i" buttons and hovering an option shows its example', async ({ page }) => {
+  await page.goto(DEMO)
+  await selectScript(page, 'Tamil')
+  await expect(page.locator('.aksharamukha-text').first()).toContainText('நமஸ்தே', { timeout: 15000 })
+  await openOptions(page)
+  const chip = page.locator('.aksharamukha-chip', { has: page.locator('#aksharamukha-opt-TamilGranthaVisarga') })
+  await expect(chip.locator('.aksharamukha-info')).toBeHidden()
+  await chip.locator('label').hover()
+  await expect(chip.locator('.aksharamukha-tooltip')).toBeVisible()
 })
 
 test('a post-option checkbox toggles and changes the converted output', async ({ page }) => {

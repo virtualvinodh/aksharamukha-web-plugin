@@ -48,8 +48,9 @@ shorthand for something like "Zanabazar Square" that everyone would
 recognize. For "Original script" it reads "Change script".
 
 The panel opens by itself while the page is in its original script, so
-visitors discover it - except on narrow screens (under 640px, where it
-would cover the text) and for a visitor who has hidden it: that choice is
+visitors discover it - except on phones and tablets (screens under 640px
+wide, or touch screens without hover, where it would cover the text) and
+for a visitor who has hidden it: that choice is
 remembered across pages and visits (under the same `hidePlugin` storage
 key v3 used, so it carries over from v3). A visitor who has picked a
 script starts with the badge instead.
