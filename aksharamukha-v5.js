@@ -3662,6 +3662,9 @@ var Config = (function () {
     // hosted API if it fails to load/run. 'wasm'/'api' force one or the
     // other with no fallback (useful for testing/debugging).
     engine: params.get('engine') || 'auto',
+    // fonts.css and icon.png are loaded from next to this script, so on the
+    // CDN they're pinned to the same version as the script itself.
+    assetBase: new URL('./', scriptURL),
     wasmBase: params.get('wasmbase')
       ? new URL(params.get('wasmbase'), document.baseURI)
       : new URL('wasm/', scriptURL),
@@ -4303,7 +4306,7 @@ var Panel = (function () {
     document.head.appendChild(style)
     var link = document.createElement('link')
     link.rel = 'stylesheet'
-    link.href = 'https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha/aksharamukha-front/src/statics/fonts.css'
+    link.href = new URL('fonts.css', Config.assetBase).href
     document.head.appendChild(link)
   }
 
@@ -4374,6 +4377,7 @@ var Panel = (function () {
 
   function build () {
     injectStyles()
+    var ICON_URL = new URL('icon.png', Config.assetBase).href
 
     var launcher = document.createElement('button')
     launcher.type = 'button'
@@ -4381,7 +4385,7 @@ var Panel = (function () {
     launcher.className = 'aksharamukha-printhide'
     launcher.title = 'Convert script (Aksharamukha)'
     launcher.setAttribute('aria-label', 'Open script converter')
-    launcher.innerHTML = '<img src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin/icon.png" width="22px" alt=""/>' +
+    launcher.innerHTML = '<img src="' + ICON_URL + '" width="22px" alt=""/>' +
       '<span id="aksharamukha-launcher-label"></span>'
     document.body.appendChild(launcher)
 
@@ -4407,7 +4411,7 @@ var Panel = (function () {
       '<div id="aksharamukha-error" hidden></div>' +
       '<div id="aksharamukha-branding">' +
       '<a href="https://aksharamukha.com" class="aksharamukha-hyperlink" target="_blank" rel="noopener">' +
-      '<img src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin/icon.png" width="15px" alt=""/> <small><sup>Aksharamukha</sup></small></a>' +
+      '<img src="' + ICON_URL + '" width="15px" alt=""/> <small><sup>Aksharamukha</sup></small></a>' +
       '</div>'
     document.body.insertAdjacentElement('afterbegin', root)
 
@@ -4439,8 +4443,10 @@ var Panel = (function () {
     root.addEventListener('change', onRootInput)
     root.addEventListener('click', onRootInput)
     root.addEventListener('keydown', onRootKeydown)
-    els.hideButton.addEventListener('click', hide)
-    launcher.addEventListener('click', show)
+    // Only the visitor's own clicks are remembered - not the automatic
+    // open on a first visit below.
+    els.hideButton.addEventListener('click', function () { hide(); Storage.set(HIDDEN_KEY, 'true') })
+    launcher.addEventListener('click', function () { show(); Storage.set(HIDDEN_KEY, 'false') })
     els.searchInput.addEventListener('focus', openFresh)
     // Focus alone doesn't cover a click on the box while it already has
     // focus (e.g. after Escape), which should reopen the list too.
@@ -4452,18 +4458,26 @@ var Panel = (function () {
       if (!root.contains(event.target)) closeListbox()
     })
 
-    // Open straight to the panel on a first-ever visit (nothing saved yet,
-    // or the visitor previously reset to Original) so they discover it at
-    // all. A returning visitor who already picked a real target starts
-    // collapsed behind the launcher instead - they know how this works,
-    // no need to reopen the panel every visit. Combined with the matching
-    // auto-hide in selectValue() below (badge -> pick a script -> badge
-    // again), the panel only ever stays open while there's something left
-    // to decide.
-    if (!restoredTarget || restoredTarget === 'Original') show()
+    // Open straight to the panel while the visitor is on the original
+    // script, so they discover it at all - unless they've hidden it
+    // themselves (otherwise a reader who doesn't want it would have to
+    // close it again on every page of a multi-page site), or the screen is
+    // too narrow for it not to cover the text. A visitor who already
+    // picked a script starts collapsed behind the badge, which shows it.
+    var onOriginal = !restoredTarget || restoredTarget === 'Original'
+    var hiddenByVisitor = Storage.get(HIDDEN_KEY) === 'true'
+    var narrowScreen = window.matchMedia && window.matchMedia('(max-width: ' + NARROW_SCREEN_PX + 'px)').matches
+    if (onOriginal && !hiddenByVisitor && !narrowScreen) show()
 
     return restoredTarget
   }
+
+  // Same key v3 used, so a visitor who hid the v3 widget on a site keeps
+  // that choice after the site moves to v5.
+  var HIDDEN_KEY = 'hidePlugin'
+  // The open panel is 220px wide plus margins: below this it covers a
+  // good part of a phone's screen.
+  var NARROW_SCREEN_PX = 640
 
   var optionsData = []
   var activeOptionId = null

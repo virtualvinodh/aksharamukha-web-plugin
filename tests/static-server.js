@@ -10,6 +10,8 @@ const port = 4173
 const mime = {
   '.js': 'application/javascript',
   '.html': 'text/html',
+  '.css': 'text/css',
+  '.png': 'image/png',
   '.json': 'application/json',
   '.wasm': 'application/wasm',
   '.whl': 'application/octet-stream',

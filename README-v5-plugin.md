@@ -6,10 +6,10 @@ launcher appears letting visitors pick a target script.
 
 ```html
 <div class="aksharamukha-text">आपका पाठ यहाँ जाएगा</div>
-<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@v5.0.3/aksharamukha-v5.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@v5.0.13/aksharamukha-v5.js"></script>
 ```
 
-That `@v5.0.3` matters - see "Releasing a new version" below for why real
+That `@v5.0.13` matters - see "Releasing a new version" below for why real
 embeds should always pin a tag like this instead of tracking `master`.
 
 `aksharamukha-v5.js` is the current version. `aksharamukha-v2.js`/`v3.js`/`v4.js`
@@ -45,7 +45,14 @@ what's currently displayed at a glance without expanding the panel -
 works the same on touch as on desktop, unlike a hover-only tooltip. It's
 the full name, not an abbreviation - there's no reliable 2-3 letter
 shorthand for something like "Zanabazar Square" that everyone would
-recognize. Empty (plain icon) for "Original script".
+recognize. For "Original script" it reads "Change script".
+
+The panel opens by itself while the page is in its original script, so
+visitors discover it - except on narrow screens (under 640px, where it
+would cover the text) and for a visitor who has hidden it: that choice is
+remembered across pages and visits (under the same `hidePlugin` storage
+key v3 used, so it carries over from v3). A visitor who has picked a
+script starts with the badge instead.
 
 > **⚠️ If no element on the page has the `class` above, the plugin wraps
 > and converts the ENTIRE `<body>` - navigation, footer, everything, not
@@ -76,10 +83,10 @@ recognize. Empty (plain icon) for "Original script".
 
 ```html
 <!-- lightweight: always uses the hosted API, no WASM download -->
-<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@v5.0.3/aksharamukha-v5.js?engine=api"></script>
+<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@v5.0.13/aksharamukha-v5.js?engine=api"></script>
 
 <!-- panel in the bottom-left, offset for a page with a tall fixed footer -->
-<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@v5.0.3/aksharamukha-v5.js?position=bottom-left&offset=60"></script>
+<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@v5.0.13/aksharamukha-v5.js?position=bottom-left&offset=60"></script>
 ```
 
 ## Theming
@@ -140,7 +147,7 @@ element instead of (or in addition to) the script-tag-wide `source`/
 <div class="verse inputscript-Telugu">మహాశ్రమణ</div>
 <div class="verse inputscript-Malayalam">കുസുമിതോ ലക്ഷണൈഃ</div>
 <div class="verse inputscript-Tamil preoptions-TamilTranscribe">ஆதீஸ்வர் ஸ்ரீவிருஷபநாதர்</div>
-<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@v5.0.3/aksharamukha-v5.js?class=verse"></script>
+<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@v5.0.13/aksharamukha-v5.js?class=verse"></script>
 ```
 
 Elements added to the page later (SPA route changes, AJAX-loaded content,
@@ -151,6 +158,7 @@ currently selected - no rescan or re-init needed.
 
 - `demo-v5.html` - default (`engine=auto`) demo.
 - `demo-v5-api.html` - lightweight (`engine=api`) demo.
+- Self-hosting instead of using jsDelivr: keep `fonts.css`, `icon.png` and `wasm/` in the same folder as `aksharamukha-v5.js` - the plugin loads them from next to itself.
 - Must be served over HTTP, not opened as a `file://` page - WASM
   instantiation is blocked under `file://` in most browsers. From this
   folder: `python -m http.server 8000`, then open `http://localhost:8000/demo-v5.html`.
@@ -309,7 +317,7 @@ pre-compression). **Real embeds - anything you'd actually tell someone to
 paste into their site - must pin a tag, not track `master`:**
 
 ```html
-<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@v5.0.3/aksharamukha-v5.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@v5.0.13/aksharamukha-v5.js"></script>
 ```
 
 jsDelivr treats a tag-pinned path as immutable and caches it long-term,
@@ -321,14 +329,25 @@ of the latest commit, never for a snippet you hand to someone else.
 snippet to move forward):
 
 1. Land whatever changes you're releasing on `master` as normal.
-2. If `ScriptMixin.js` changed, or you just want a fresh build: run
-   `node build-scripts/build-web-plugin-v5.js` and commit the resulting
-   `aksharamukha-v5.js` (and `src/script-data.generated.js` if it changed).
+2. Run `node build-scripts/build-web-plugin-v5.js` - **without**
+   `--skip-compression`, so `aksharamukha-v5.js.br` is rebuilt to match
+   (CI fails if the two differ) - and commit the resulting
+   `aksharamukha-v5.js`, `aksharamukha-v5.js.br`, `fonts.css`, and
+   `src/script-data.generated.js` if they changed. The build needs the
+   `aksharamukha` monorepo checked out as a sibling and network access (to
+   pin `fonts.css`'s font import to the `aksharamukha-fonts` repo's
+   current commit); without either, it keeps the existing files and warns.
 3. If Pyodide or a wheel version changed: run
    `pwsh build-scripts/copy-wasm-assets.ps1`, review the size/diff of
    `wasm/` (this is the one step that can meaningfully bloat repo
    history - it's a full binary replacement, not a diffable text change),
-   and commit it.
+   and commit it. Also bump `WASM_CACHE_NAME` in `src/v5-plugin.js` (e.g.
+   `aksharamukha-wasm-v1` → `-v2`) and update `AKSHARAMUKHA_WHEEL` /
+   `DEP_WHEELS` there if file names changed. Visitors' browsers keep the
+   engine files in Cache Storage by URL and never re-check them, so
+   anyone loading `wasm/` from a URL that doesn't change between versions
+   (a self-hosted copy, or an unpinned CDN path) would otherwise keep the
+   old engine indefinitely. Tag-pinned CDN embeds get new URLs anyway.
 4. Tag the commit: `git tag -a v5.1.0 -m "..."` (bump the version
    sensibly; these don't have to map 1:1 to semver, just be unique and
    ordered) and `git push origin v5.1.0` (and `git push` the commits too).

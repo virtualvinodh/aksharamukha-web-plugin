@@ -19,6 +19,16 @@ jobs:
 
       - run: npm ci
 
+      # aksharamukha-v5.js.br must be the compressed form of the committed
+      # aksharamukha-v5.js - anyone self-hosting with pre-compressed files
+      # would otherwise serve older code than the .js.
+      - name: Check aksharamukha-v5.js.br matches aksharamukha-v5.js
+        run: >
+          node -e "const z = require('zlib'), fs = require('fs');
+          if (!z.brotliDecompressSync(fs.readFileSync('aksharamukha-v5.js.br')).equals(fs.readFileSync('aksharamukha-v5.js'))) {
+          console.error('aksharamukha-v5.js.br is out of date - run node build-scripts/build-web-plugin-v5.js without --skip-compression and commit both files.');
+          process.exit(1) }"
+
       # Validates the build pipeline still works standalone (no monorepo
       # checked out here - it should warn and fall back to the committed
       # src/script-data.generated.js, not fail) and that the result is at

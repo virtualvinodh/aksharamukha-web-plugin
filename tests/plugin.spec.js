@@ -47,6 +47,59 @@ test('hide button collapses to the launcher badge; clicking it reopens', async (
   await expect(page.locator('#aksharamukha-navbar')).toBeVisible()
 })
 
+test('hiding the panel is remembered across page loads; reopening it is too', async ({ page }) => {
+  // Regression: on "Original script" the panel reopened on every page
+  // load, so a reader who doesn't want it had to hide it on every page.
+  const navbar = page.locator('#aksharamukha-navbar')
+  const launcher = page.locator('#aksharamukha-launcher')
+  await page.goto(DEMO)
+  await expect(navbar).toBeVisible()
+  await page.click('#aksharamukha-pluginhidebutton')
+  await page.reload()
+  await expect(navbar).toBeHidden()
+  await expect(launcher).toBeVisible()
+  await expect(page.locator('#aksharamukha-launcher-label')).toHaveText('Change script')
+
+  await launcher.click()
+  await expect(navbar).toBeVisible()
+  await page.reload()
+  await expect(navbar).toBeVisible()
+})
+
+test('a hide saved by v3 (same storage key) is respected', async ({ page }) => {
+  await page.goto(DEMO)
+  await page.evaluate(() => localStorage.setItem('hidePlugin', 'true'))
+  await page.reload()
+  await expect(page.locator('#aksharamukha-navbar')).toBeHidden()
+  await expect(page.locator('#aksharamukha-launcher')).toBeVisible()
+})
+
+test('on a narrow (phone) screen the panel starts collapsed to the badge', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 800 })
+  await page.goto(DEMO)
+  await expect(page.locator('#aksharamukha-navbar')).toBeHidden()
+  await expect(page.locator('#aksharamukha-launcher')).toBeVisible()
+  await page.click('#aksharamukha-launcher')
+  await expect(page.locator('#aksharamukha-navbar')).toBeVisible()
+})
+
+test('fonts.css and the icon load from next to the script, with the font import pinned', async ({ page }) => {
+  // Regression: fonts.css came from an unpinned CDN branch path, which was
+  // served stale and broke fonts like Grantha (Pandya)'s.
+  const fontsCss = page.waitForResponse(r => r.url().endsWith('/fonts.css'))
+  await page.goto(DEMO)
+  const response = await fontsCss
+  expect(response.url()).toBe(new URL('/fonts.css', page.url()).href)
+  expect(response.status()).toBe(200)
+  expect(await response.text()).toMatch(/aksharamukha-fonts@[0-9a-f]{40}\/aksharamukha-fonts\.css/)
+  // Its script-to-font rules are actually in effect.
+  await expect.poll(() => page.evaluate(() => Array.from(document.styleSheets).some(sheet => {
+    try { return Array.from(sheet.cssRules).some(rule => rule.selectorText === '.granthapandya') } catch (e) { return false }
+  }))).toBe(true)
+  const iconSrc = await page.locator('#aksharamukha-launcher img').getAttribute('src')
+  expect(iconSrc).toBe(new URL('/icon.png', page.url()).href)
+})
+
 test('return visit with a saved target starts collapsed to the badge', async ({ page }) => {
   await page.goto(DEMO)
   await selectScript(page, 'Tamil')
