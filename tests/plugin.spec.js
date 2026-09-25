@@ -100,6 +100,91 @@ test('fonts.css and the icon load from next to the script, with the font import 
   expect(iconSrc).toBe(new URL('/icon.png', page.url()).href)
 })
 
+test('loaded from jsDelivr, the engine comes from the commit that last changed wasm/, not the release\'s own folder', async ({ page, context }) => {
+  // So a plugin release that doesn't touch the engine doesn't make every
+  // visitor download it again. Serves this build as if it were a jsDelivr
+  // release (@v9.9.9), and the engine files from the local wasm/.
+  const fs = require('fs')
+  const path = require('path')
+  const repo = path.join(__dirname, '..')
+  const engineCommit = fs.readFileSync(path.join(repo, 'aksharamukha-v5.js'), 'utf8').match(/var ENGINE_COMMIT = "([0-9a-f]{40})"/)[1]
+  const cdn = 'https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin'
+  const types = { '.js': 'application/javascript', '.css': 'text/css', '.png': 'image/png', '.wasm': 'application/wasm', '.json': 'application/json' }
+  const serve = (route, file) => route.fulfill({ path: file, contentType: types[path.extname(file)] || 'application/octet-stream' })
+  const engineRequests = []
+  await context.route(cdn + '@*/wasm/**', route => {
+    engineRequests.push(route.request().url())
+    serve(route, path.join(repo, 'wasm', new URL(route.request().url()).pathname.split('/wasm/')[1]))
+  })
+  await context.route(cdn + '@v9.9.9/*', route => serve(route, path.join(repo, new URL(route.request().url()).pathname.split('/').pop())))
+
+  await page.goto(DEMO)
+  await page.setContent(`
+    <!DOCTYPE html><html><head><meta charset="utf-8"/></head><body>
+    <p class="aksharamukha-text">नमस्ते</p>
+    <script src="${cdn}@v9.9.9/aksharamukha-v5.js?source=Devanagari"></script></body></html>
+  `, { waitUntil: 'load' })
+  await expect.poll(() => engineRequests.some(u => u.includes('/wheel/')), { timeout: 60000 }).toBe(true)
+  const engineBase = cdn + '@' + engineCommit + '/wasm/'
+  expect(engineRequests.filter(u => !u.startsWith(engineBase))).toEqual([])
+})
+
+test('a shared link with ?akshrmkh=Target opens the page in that script', async ({ page }) => {
+  // Regression: v5 wrote this parameter (with changeurl=1) but never read it.
+  await page.goto(DEMO + '?akshrmkh=Tamil')
+  await expect(page.locator('.aksharamukha-text').first()).toContainText('நமஸ்தே', { timeout: 15000 })
+  await expect(page.locator('#aksharamukha-launcher-label')).toHaveText('Tamil')
+  await expect(page.locator('#aksharamukha-navbar')).toBeHidden()
+})
+
+test('an unknown ?akshrmkh= value is ignored', async ({ page }) => {
+  await page.goto(DEMO + '?akshrmkh=NotAScript')
+  await expect(page.locator('#aksharamukhaselect')).toHaveValue('Original')
+})
+
+test('with changeurl=1, picks update the address without adding Back-button entries', async ({ page }) => {
+  await page.goto(DEMO)
+  await page.setContent(`
+    <!DOCTYPE html><html><head><meta charset="utf-8"/></head><body>
+    <p class="aksharamukha-text">नमस्ते</p>
+    <script src="/aksharamukha-v5.js?engine=api&source=Devanagari&changeurl=1"></script></body></html>
+  `, { waitUntil: 'load' })
+  const historyLength = await page.evaluate(() => history.length)
+  await selectScript(page, 'Tamil')
+  await expect.poll(() => new URL(page.url()).searchParams.get('akshrmkh')).toBe('Tamil')
+  await selectScript(page, 'Telugu')
+  await expect.poll(() => new URL(page.url()).searchParams.get('akshrmkh')).toBe('Telugu')
+  expect(await page.evaluate(() => history.length)).toBe(historyLength)
+  await selectScript(page, 'Original script')
+  await expect.poll(() => new URL(page.url()).searchParams.has('akshrmkh')).toBe(false)
+})
+
+test('Tab out of the search box closes the list and moves focus on', async ({ page }) => {
+  await page.goto(DEMO)
+  const input = page.locator('#aksharamukha-select-input')
+  await input.click()
+  await input.fill('Ta')
+  await expect(page.locator('#aksharamukha-listbox')).toBeVisible()
+  await page.keyboard.press('Tab')
+  await expect(page.locator('#aksharamukha-listbox')).toBeHidden()
+  await expect(input).not.toBeFocused()
+  await expect(input).toHaveValue('Original script')
+})
+
+test('after a keyboard pick, focus stays on the panel instead of jumping to the top of the page', async ({ page }) => {
+  await page.goto(DEMO)
+  const input = page.locator('#aksharamukha-select-input')
+  await input.click()
+  await input.fill('Tamil')
+  await page.keyboard.press('Enter')
+  await expect(input).not.toBeFocused()
+  await expect(page.locator('#aksharamukha-navbar')).toBeFocused()
+  // Escape does the same.
+  await input.click()
+  await page.keyboard.press('Escape')
+  await expect(page.locator('#aksharamukha-navbar')).toBeFocused()
+})
+
 test('return visit with a saved target starts collapsed to the badge', async ({ page }) => {
   await page.goto(DEMO)
   await selectScript(page, 'Tamil')

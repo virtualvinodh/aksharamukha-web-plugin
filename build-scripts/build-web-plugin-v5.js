@@ -14,17 +14,21 @@
  *   2. src/v5-plugin.js
  *      (the actual plugin logic - hand-edited, lives in this repo)
  *
+ * It also copies the WASM engine (the Pyodide runtime and the aksharamukha
+ * wheel) from upstream - aksharamukha-python/aksharamukha-wasm, the source
+ * of truth - into wasm/, only where something differs (see syncEngine()).
+ *
  * Also writes aksharamukha-v5.js.br, a Brotli-compressed sibling - the
  * bundle is plain JS text and compresses extremely well (measured ~80%
- * smaller). Same as wasm/'s .br siblings (see copy-wasm-assets.ps1), this
- * does nothing by itself: your host/CDN has to actually serve it in place
- * of the original with a Content-Encoding: br header - see
- * README-v5-plugin.md's "Serving pre-compressed assets" section. Pass
- * --skip-compression to skip generating it.
+ * smaller). Same as wasm/'s .br siblings, this does nothing by itself:
+ * your host/CDN has to actually serve it in place of the original with a
+ * Content-Encoding: br header - see README-v5-plugin.md's "Serving
+ * pre-compressed assets" section. Pass --skip-compression to skip it.
  *
- * Usage: node build-scripts/build-web-plugin-v5.js [monorepo-path] [--skip-compression]
- *   monorepo-path defaults to ../aksharamukha (a sibling of this repo's
- *   own checkout) - pass a path if yours lives elsewhere.
+ * Usage: node build-scripts/build-web-plugin-v5.js [monorepo-path] [--engine-from=<path>] [--skip-compression]
+ *   monorepo-path defaults to ../aksharamukha, and --engine-from to
+ *   ../aksharamukha-python/aksharamukha-wasm (siblings of this repo's own
+ *   checkout) - pass paths if yours live elsewhere.
  */
 const fs = require('fs')
 const path = require('path')
@@ -95,10 +99,123 @@ function syncFontsCss (monorepoPath) {
   console.log('Wrote fonts.css (aksharamukha-fonts pinned to ' + sha.slice(0, 7) + ')')
 }
 
+const WASM_DIR = path.join(PLUGIN_DIR, 'wasm')
+const ENGINE_FOLDERS = ['pyodide', 'wheel']
+
+function listFiles (dir) {
+  const out = []
+  ;(function walk (rel) {
+    for (const entry of fs.readdirSync(path.join(dir, rel), { withFileTypes: true })) {
+      const p = rel ? rel + '/' + entry.name : entry.name
+      if (entry.isDirectory()) walk(p)
+      else out.push(p)
+    }
+  })('')
+  return out
+}
+
+function brotli (data) {
+  return zlib.brotliCompressSync(data, {
+    params: {
+      [zlib.constants.BROTLI_PARAM_QUALITY]: zlib.constants.BROTLI_MAX_QUALITY,
+      [zlib.constants.BROTLI_PARAM_SIZE_HINT]: data.length
+    }
+  })
+}
+
+// Copies the engine from upstream into wasm/ - only files whose contents
+// differ, plus removing files upstream no longer has - and writes a .br
+// sibling for each copied file. Unchanged files are left alone, so wasm/'s
+// commit (which visitors load the engine from) only moves when the
+// engine really changed. Returns the list of changes, or null if upstream
+// isn't checked out here (then the existing wasm/ is used as-is).
+function syncEngine (upstream) {
+  if (!ENGINE_FOLDERS.every(f => fs.existsSync(path.join(upstream, f)))) {
+    console.warn('Skipping engine sync: ' + upstream + ' has no pyodide/ and wheel/ folders. Using the existing wasm/ as-is.')
+    return null
+  }
+  const changes = []
+  for (const folder of ENGINE_FOLDERS) {
+    const src = path.join(upstream, folder)
+    const dst = path.join(WASM_DIR, folder)
+    const srcFiles = listFiles(src)
+    const dstFiles = fs.existsSync(dst) ? listFiles(dst).filter(f => !f.endsWith('.br')) : []
+    for (const f of srcFiles) {
+      const data = fs.readFileSync(path.join(src, f))
+      const to = path.join(dst, f)
+      if (fs.existsSync(to) && fs.readFileSync(to).equals(data)) continue
+      console.log('Engine: copying ' + folder + '/' + f + ' (and compressing it - large files take a while)')
+      fs.mkdirSync(path.dirname(to), { recursive: true })
+      fs.writeFileSync(to, data)
+      fs.writeFileSync(to + '.br', brotli(data))
+      changes.push(folder + '/' + f)
+    }
+    for (const f of dstFiles.filter(f => !srcFiles.includes(f))) {
+      fs.unlinkSync(path.join(dst, f))
+      if (fs.existsSync(path.join(dst, f + '.br'))) fs.unlinkSync(path.join(dst, f + '.br'))
+      changes.push(folder + '/' + f + ' (removed - no longer upstream)')
+    }
+  }
+  return changes
+}
+
+// The one aksharamukha wheel in wasm/wheel/ - its file name (which carries
+// the version) is baked into the bundle, so a new upstream version needs no
+// edit here. Also checks the extra wheels src/v5-plugin.js installs itself
+// (DEP_WHEELS) are all present, so a renamed one fails the build rather
+// than the engine in visitors' browsers.
+function engineWheel (pluginSrc) {
+  const wheels = listFiles(path.join(WASM_DIR, 'wheel')).filter(f => f.endsWith('.whl'))
+  if (wheels.length !== 1) throw new Error('Expected exactly one .whl in wasm/wheel/, found: ' + (wheels.join(', ') || 'none'))
+  const depList = (pluginSrc.match(/var DEP_WHEELS = \[([\s\S]*?)\]/) || [])[1]
+  if (!depList) throw new Error('Could not find DEP_WHEELS in src/v5-plugin.js.')
+  const missing = (depList.match(/'[^']+\.whl'/g) || []).map(s => s.slice(1, -1))
+    .filter(w => !fs.existsSync(path.join(WASM_DIR, 'pyodide', w)))
+  if (missing.length) {
+    throw new Error('DEP_WHEELS in src/v5-plugin.js lists wheels that aren\'t in wasm/pyodide/: ' + missing.join(', ') +
+      ' - update the list to match the files upstream.')
+  }
+  return wheels[0]
+}
+
+// The commit that last changed wasm/. It's baked into the bundle as
+// ENGINE_COMMIT: on jsDelivr the plugin loads the engine from that commit
+// instead of from next to itself, so a plugin release that doesn't touch
+// the engine doesn't make every visitor download it again (see
+// defaultWasmBase() in src/v5-plugin.js). Tracked by git, so there's no
+// separate engine version to maintain.
+function engineCommit () {
+  const git = argv => spawnSync('git', argv, { cwd: PLUGIN_DIR, encoding: 'utf8' })
+  const status = git(['status', '--porcelain', '--', 'wasm/'])
+  if (status.status !== 0) throw new Error('git status failed - the build needs this repo\'s git checkout: ' + status.stderr)
+  if (status.stdout.trim()) {
+    throw new Error('wasm/ has uncommitted changes. Commit them first: visitors load the engine from ' +
+      'the commit that last changed wasm/, so that commit has to contain these files.')
+  }
+  const sha = git(['log', '-1', '--format=%H', '--', 'wasm/']).stdout.trim()
+  if (!/^[0-9a-f]{40}$/.test(sha)) throw new Error('Could not find the commit that last changed wasm/.')
+  if (git(['rev-parse', '--is-shallow-repository']).stdout.trim() === 'true') {
+    throw new Error('This is a shallow clone, so the commit that last changed wasm/ can\'t be found reliably - fetch the full history (e.g. actions/checkout with fetch-depth: 0).')
+  }
+  return sha
+}
+
 function main () {
   const args = process.argv.slice(2)
   const skipCompression = args.includes('--skip-compression')
   const monorepoPath = args.find(a => !a.startsWith('--')) || path.join(PLUGIN_DIR, '..', 'aksharamukha')
+  const engineFromArg = args.find(a => a.startsWith('--engine-from='))
+  const enginePath = engineFromArg ? engineFromArg.slice('--engine-from='.length) : path.join(PLUGIN_DIR, '..', 'aksharamukha-python', 'aksharamukha-wasm')
+
+  const engineChanges = syncEngine(enginePath)
+  if (engineChanges && engineChanges.length) {
+    console.log('\nThe engine changed upstream:\n  ' + engineChanges.join('\n  ') +
+      '\n\nCommit wasm/, then run this build again: the plugin loads the engine from the commit that contains it.' +
+      '\nIf the Pyodide runtime itself changed, also bump WASM_CACHE_NAME in src/v5-plugin.js (see the README\'s release checklist).')
+    process.exitCode = 1
+    return
+  }
+
   regenerateScriptData(monorepoPath)
   syncFontsCss(monorepoPath)
 
@@ -125,10 +242,16 @@ function main () {
   // comments carried over from ScriptMixin.js). Git normalizes the .js to
   // LF on commit but stores the .br as-is, so without this the committed
   // .br wouldn't decompress to the committed .js (CI checks they match).
-  const out = (banner + '(function () {\n"use strict";\n' + dataSrc + '\n' + pluginSrc + '\n})();\n').replace(/\r\n/g, '\n')
+  const engine = engineCommit()
+  const wheel = engineWheel(pluginSrc)
+  const out = (banner + '(function () {\n"use strict";\n' +
+    '// Set by the build: the commit that last changed wasm/, and the aksharamukha wheel in it.\n' +
+    'var ENGINE_COMMIT = ' + JSON.stringify(engine) + '\n' +
+    'var ENGINE_WHEEL = ' + JSON.stringify(wheel) + '\n' +
+    dataSrc + '\n' + pluginSrc + '\n})();\n').replace(/\r\n/g, '\n')
 
   fs.writeFileSync(OUT_FILE, out, 'utf8')
-  console.log('Wrote ' + path.relative(process.cwd(), OUT_FILE) + ' (' + (out.length / 1024).toFixed(1) + ' KB)')
+  console.log('Wrote ' + path.relative(process.cwd(), OUT_FILE) + ' (' + (out.length / 1024).toFixed(1) + ' KB; engine from commit ' + engine.slice(0, 7) + ')')
 
   if (!skipCompression) {
     const compressed = zlib.brotliCompressSync(Buffer.from(out, 'utf8'), {

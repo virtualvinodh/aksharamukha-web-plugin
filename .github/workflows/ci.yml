@@ -11,6 +11,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The build looks up the commit that last changed wasm/ (the
+          # engine's address on jsDelivr), which needs the full history.
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -38,7 +42,9 @@ jobs:
         run: |
           node build-scripts/build-web-plugin-v5.js --skip-compression
           node -c aksharamukha-v5.js
-          git diff --stat aksharamukha-v5.js
+          # The committed bundle must be exactly what the build produces from
+          # the committed sources - including the engine commit baked in.
+          git diff --exit-code aksharamukha-v5.js || (echo "::error::aksharamukha-v5.js is out of date - run the build and commit it." && exit 1)
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium

@@ -8,6 +8,9 @@
  */
 (function () {
 "use strict";
+// Set by the build: the commit that last changed wasm/, and the aksharamukha wheel in it.
+var ENGINE_COMMIT = "0705791980f3929936043b1ab4651ee86468751c"
+var ENGINE_WHEEL = "aksharamukha-2.3-py3-none-any.whl"
 // GENERATED FILE - do not edit by hand.
 // Produced by build-scripts/build-web-plugin-data.js from
 // aksharamukha-front/src/mixins/ScriptMixin.js. Re-run that script after
@@ -3618,6 +3621,20 @@ var SEMITIC_DUPLICATE_CODES = ['Hebr', 'Thaa', 'Arab-Ur', 'Arab-Pa']
 // Config: parsed once from this script tag's own URL.
 // ---------------------------------------------------------------------------
 
+// On jsDelivr, the engine files load from the commit that last changed
+// wasm/ (ENGINE_COMMIT, set by the build) rather than from next to this
+// script. They're usually identical across plugin releases, and loading
+// them from each release's own address would make every visitor download
+// the ~9MB engine again with each release. Self-hosted copies use the
+// wasm/ folder next to the script.
+function defaultWasmBase (scriptURL) {
+  var onJsDelivr = scriptURL.hostname === 'cdn.jsdelivr.net' &&
+    scriptURL.pathname.indexOf('/gh/virtualvinodh/aksharamukha-web-plugin') === 0
+  return onJsDelivr
+    ? new URL('https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@' + ENGINE_COMMIT + '/wasm/')
+    : new URL('wasm/', scriptURL)
+}
+
 var Config = (function () {
   var scriptEl = document.currentScript
   if (!scriptEl) {
@@ -3667,7 +3684,7 @@ var Config = (function () {
     assetBase: new URL('./', scriptURL),
     wasmBase: params.get('wasmbase')
       ? new URL(params.get('wasmbase'), document.baseURI)
-      : new URL('wasm/', scriptURL),
+      : defaultWasmBase(scriptURL),
     // Which viewport corner the launcher/panel live in. The launcher and
     // the expanded panel always share the same corner and swap visibility
     // (never both shown at once), so they never collide with each other.
@@ -3863,7 +3880,9 @@ function wasmWorkerMain () {
 
 var Engine = (function () {
   var WASM_CACHE_NAME = 'aksharamukha-wasm-v1'
-  var AKSHARAMUKHA_WHEEL = 'aksharamukha-2.3-py3-none-any.whl'
+  var AKSHARAMUKHA_WHEEL = ENGINE_WHEEL // set by the build from wasm/wheel/
+  // Wheels installed directly (not via Pyodide's own package list); the
+  // build checks each one exists in wasm/pyodide/.
   var DEP_WHEELS = [
     'fonttools-4.51.0-py3-none-any.whl',
     'wrapt-2.4.0-py3-none-any.whl',
@@ -4394,6 +4413,11 @@ var Panel = (function () {
     var root = document.createElement('div')
     root.id = 'aksharamukha-navbar'
     root.className = 'aksharamukha-printhide aksharamukha-collapsed'
+    // Focusable from script only (not a Tab stop), so keyboard focus can
+    // stay on the panel after a pick - see leaveSearchBox().
+    root.tabIndex = -1
+    root.setAttribute('role', 'group')
+    root.setAttribute('aria-label', 'Script converter')
     applyPosition(root)
     root.innerHTML =
       '<div class="aksharamukha-logosec">' +
@@ -4429,7 +4453,10 @@ var Panel = (function () {
 
     optionsData = buildScriptOptionsData()
 
-    var restoredTarget = Storage.get('target')
+    // A shared link's ?akshrmkh=Target (written by changeurl=1) wins over
+    // the visitor's saved choice, as in v3.
+    var urlTarget = new URLSearchParams(window.location.search).get('akshrmkh')
+    var restoredTarget = urlTarget && Config.scriptList.indexOf(urlTarget) > -1 ? urlTarget : Storage.get('target')
     if (restoredTarget && Config.scriptList.indexOf(restoredTarget) > -1) {
       selectValue(restoredTarget, false)
     } else {
@@ -4540,12 +4567,17 @@ var Panel = (function () {
     // so a half-typed query never gets mistaken for the active script.
     els.searchInput.value = currentLabel()
     els.searchInput.placeholder = SEARCH_PLACEHOLDER
-    // Leaving the cursor in a box that shows the current script's name
-    // means the next keystroke appends to it ("Tamilk...") rather than
-    // starting a fresh search, and a click on the still-focused box
-    // wouldn't reopen the list either. Also dismisses the on-screen
-    // keyboard on phones once a pick is made.
-    els.searchInput.blur()
+  }
+
+  // After a pick, Escape, or Enter on an empty box: take the cursor out of
+  // the text box - left there, the next keystroke appends to the script's
+  // name ("Tamilk...") instead of starting a fresh search, a click on the
+  // still-focused box wouldn't reopen the list, and on phones the keyboard
+  // would stay up - but keep keyboard focus on the panel rather than
+  // dropping it to the top of the page.
+  function leaveSearchBox () {
+    closeListbox()
+    if (document.activeElement === els.searchInput) els.root.focus({ preventScroll: true })
   }
 
   // Scrolls only the listbox itself, never the host page - scrollIntoView()
@@ -4591,7 +4623,7 @@ var Panel = (function () {
     // owners relying on that wording noticed its absence).
     els.launcherLabel.textContent = value !== 'Original' && match ? match.label : 'Change script'
     els.launcher.classList.add('aksharamukha-has-label')
-    closeListbox()
+    leaveSearchBox()
     // Deliberately does NOT auto-collapse the panel on a pick: someone
     // comparing scripts or fine-tuning post-options wants to keep making
     // choices without the panel snapping shut after each one. The panel
@@ -4617,7 +4649,7 @@ var Panel = (function () {
         // Empty box, nothing highlighted (e.g. typed then cleared): keep
         // the current script rather than falling through to the first
         // visible option, which would silently switch to "Original script".
-        closeListbox()
+        leaveSearchBox()
       } else {
         // Nothing arrow-keyed yet - typing a name and hitting Enter right
         // away is the expected way to use a search field. An exact label
@@ -4634,6 +4666,10 @@ var Panel = (function () {
         if (value) selectValue(value)
       }
     } else if (event.key === 'Escape') {
+      leaveSearchBox()
+    } else if (event.key === 'Tab') {
+      // Focus moves on to the next control as usual; the list shouldn't
+      // stay open behind it.
       closeListbox()
     }
   }
@@ -4907,6 +4943,8 @@ var PANEL_CSS = '\n' +
   '#aksharamukha-navbar, #aksharamukha-navbar * { box-sizing: border-box; }\n' +
   '#aksharamukha-navbar { position: fixed; font-family: var(--aksharamukha-font, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif); width: 220px; padding: 14px 16px 12px; border-radius: var(--aksharamukha-radius, 12px); background: var(--aksharamukha-bg, #fff); border: 1px solid var(--aksharamukha-border, #e7e8ee); box-shadow: 0 4px 18px rgba(20,20,40,.08); z-index: 1000; }\n' +
   '#aksharamukha-navbar.aksharamukha-collapsed { display: none; }\n' +
+  '#aksharamukha-navbar:focus { outline: none; }\n' +
+  '#aksharamukha-navbar:focus-visible { outline: 2px solid var(--aksharamukha-accent, #6c63ff); outline-offset: 2px; }\n' +
   '.aksharamukha-logosec { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }\n' +
   '.aksharamukha-name { font-weight: 600; color: var(--aksharamukha-text, #1f2430); }\n' +
   '.aksharamukha-combobox { position: relative; }\n' +
@@ -5080,10 +5118,13 @@ async function convertNewElement (el) {
   }
 }
 
+// replaceState, not pushState: each pick used to add a Back-button entry,
+// and Back then changed the address without changing the page.
 function updateURL (target) {
   var url = new URL(window.location.href)
-  url.searchParams.set('akshrmkh', target)
-  window.history.pushState({ path: url.href }, '', url.href)
+  if (target === 'Original') url.searchParams.delete('akshrmkh')
+  else url.searchParams.set('akshrmkh', target)
+  window.history.replaceState(window.history.state, '', url.href)
 }
 
 function init () {

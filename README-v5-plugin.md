@@ -6,10 +6,10 @@ launcher appears letting visitors pick a target script.
 
 ```html
 <div class="aksharamukha-text">आपका पाठ यहाँ जाएगा</div>
-<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@v5.0.13/aksharamukha-v5.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@v5.0.15/aksharamukha-v5.js"></script>
 ```
 
-That `@v5.0.13` matters - see "Releasing a new version" below for why real
+That `@v5.0.15` matters - see "Releasing a new version" below for why real
 embeds should always pin a tag like this instead of tracking `master`.
 
 `aksharamukha-v5.js` is the current version. `aksharamukha-v2.js`/`v3.js`/`v4.js`
@@ -33,9 +33,9 @@ All parameters go on the `<script src="...">` URL itself, e.g.
 | `preoptions` | *(none)* | Comma-separated pre-processing options applied globally, e.g. `preoptions=TamilTranscribe`. Overridden per-element by a `preoptions-X` class. |
 | `scriptlist` | *(full list)* | Comma-separated list restricting which scripts appear in the picker, e.g. `scriptlist=Grantha,Kannada`. |
 | `prelist` | *(none)* | One of the preset lists below, as a shortcut for a common `scriptlist`. Ignored if `scriptlist` is also given. |
-| `changeurl` | `0` | Set to `1` to push the selected target into the page URL (`?akshrmkh=Target`) via `history.pushState`, so a reload/shared link keeps the same conversion. |
+| `changeurl` | `0` | Set to `1` to keep the selected target in the page URL (`?akshrmkh=Target`, updated in place - no extra Back-button entries), so a reload or shared link opens in the same script. A link carrying `?akshrmkh=` is honored whatever this is set to. |
 | `engine` | `auto` | Which conversion engine to use - see below. |
-| `wasmbase` | *(the `wasm/` folder next to the script)* | URL prefix to load the WASM runtime + `aksharamukha` wheel from, if you're hosting them somewhere other than alongside the script. |
+| `wasmbase` | *(on jsDelivr: the engine's own commit; self-hosted: the `wasm/` folder next to the script)* | URL prefix to load the WASM runtime + `aksharamukha` wheel from, if you're hosting them somewhere else. See "Build pipeline" below for why jsDelivr embeds load it from a fixed commit. |
 | `position` | `top-right` | Which viewport corner the launcher/panel live in: `top-right`, `top-left`, `bottom-right`, or `bottom-left`. The launcher and the expanded panel always share this corner and swap visibility, so they never overlap each other. |
 | `offset` | `20` | Distance in px from whichever edge(s) `position` puts the panel against. Raise this if your page has a fixed header/footer at that edge that would otherwise sit on top of the panel - e.g. `offset=80` for an 80px-tall fixed header when using a `top-*` position. |
 
@@ -84,10 +84,10 @@ script starts with the badge instead.
 
 ```html
 <!-- lightweight: always uses the hosted API, no WASM download -->
-<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@v5.0.13/aksharamukha-v5.js?engine=api"></script>
+<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@v5.0.15/aksharamukha-v5.js?engine=api"></script>
 
 <!-- panel in the bottom-left, offset for a page with a tall fixed footer -->
-<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@v5.0.13/aksharamukha-v5.js?position=bottom-left&offset=60"></script>
+<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@v5.0.15/aksharamukha-v5.js?position=bottom-left&offset=60"></script>
 ```
 
 ## Theming
@@ -148,7 +148,7 @@ element instead of (or in addition to) the script-tag-wide `source`/
 <div class="verse inputscript-Telugu">మహాశ్రమణ</div>
 <div class="verse inputscript-Malayalam">കുസുമിതോ ലക്ഷണൈഃ</div>
 <div class="verse inputscript-Tamil preoptions-TamilTranscribe">ஆதீஸ்வர் ஸ்ரீவிருஷபநாதர்</div>
-<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@v5.0.13/aksharamukha-v5.js?class=verse"></script>
+<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@v5.0.15/aksharamukha-v5.js?class=verse"></script>
 ```
 
 Elements added to the page later (SPA route changes, AJAX-loaded content,
@@ -197,13 +197,13 @@ Projects/
 │  ├─ src/script-data.generated.js   <- generated, see step 1
 │  ├─ src/v5-plugin.js               <- hand-edited, lives here
 │  ├─ build-scripts/build-web-plugin-v5.js
-│  └─ build-scripts/copy-wasm-assets.ps1
-└─ aksharamukha-python/       (only needed for step 3, the WASM engine)
-   └─ aksharamukha-wasm/
+│  └─ wasm/                          <- copied from upstream, committed
+└─ aksharamukha-python/       (upstream - the source of truth for the engine)
+   └─ aksharamukha-wasm/pyodide/, wheel/
 ```
 
-To rebuild after any change (`ScriptMixin.js` in the monorepo, or
-`src/v5-plugin.js` here), run one command **in this repo**:
+To rebuild after any change (`ScriptMixin.js` in the monorepo, the engine
+upstream, or `src/v5-plugin.js` here), run one command **in this repo**:
 
 ```
 node build-scripts/build-web-plugin-v5.js
@@ -224,27 +224,42 @@ so this still works standalone, just without picking up any
 `ScriptMixin.js` changes since the last time someone with the monorepo
 ran it.
 
-**Only after a Pyodide/wheel version bump** (rare, separate from the
-above): run `pwsh build-scripts/copy-wasm-assets.ps1` to copy the
-Pyodide runtime + `aksharamukha` wheel from a sibling `aksharamukha-python`
-checkout into `wasm/` (gitignored here - it's a ~20MB binary payload;
-host it on your CDN alongside the script for production rather than
-committing it, or point embeds at it via `?wasmbase=`). This also
-pre-compresses every file to a `.br` sibling (`pyodide.asm.wasm.br`,
-etc.) - see below for why, and what your host needs to do with them.
-Pass `-SkipCompression` to skip that step.
+**The WASM engine** (the Pyodide runtime plus the `aksharamukha` wheel)
+comes from upstream: `aksharamukha-python/aksharamukha-wasm/pyodide/` and
+`wheel/`, which is the source of truth - this repo never builds it, it
+only copies it. The same build command compares upstream with `wasm/`
+file by file (pass `--engine-from=<path>` if upstream lives elsewhere):
 
-There's no build script in this repo that *writes to* `ScriptMixin.js`
-or anything else in the monorepo - it only ever reads from it.
+- **Nothing differs** (the usual case): `wasm/` is left untouched.
+- **Something differs:** it copies the changed files into `wasm/` (and
+  removes ones upstream dropped), writes a `.br` for each, and **stops**
+  with "commit `wasm/`, then run the build again". The bundle loads the
+  engine from the commit that last changed `wasm/`, so that commit has to
+  exist first. The second run then builds the bundle pointing at it.
+- The build refuses to run while `wasm/` has uncommitted changes, for the
+  same reason.
+
+On jsDelivr, the plugin loads the engine from that commit
+(`…aksharamukha-web-plugin@<commit>/wasm/`), not from next to the script.
+So a plugin release that doesn't change the engine doesn't make visitors
+download the ~9MB engine again. Self-hosted copies (and `?wasmbase=`) are
+unaffected. The wheel's file name (e.g. a new version number) is picked up
+from `wasm/wheel/` automatically; the few extra wheels the plugin installs
+itself are listed in `DEP_WHEELS` in `src/v5-plugin.js`, and the build
+fails if any of them is missing from `wasm/pyodide/`.
+
+The build needs this repo's git history (not a shallow clone) to find the
+engine's commit. There's no build step that *writes to* the monorepo or
+upstream - it only ever reads from them.
 
 ## Serving pre-compressed assets
 
-Both build scripts generate a `.br` (Brotli) sibling at maximum quality:
-`copy-wasm-assets.ps1` for every file under `wasm/` (.NET's built-in
-Brotli codec), and `build-web-plugin-v5.js` for `aksharamukha-v5.js`
-itself (Node's built-in `zlib` Brotli codec) - the bundle is plain JS
-text and compresses just as well as the other JS glue files below. Pass
-`-SkipCompression`/`--skip-compression` to either script to skip it.
+The build writes a `.br` (Brotli) sibling at maximum quality for every
+file it copies into `wasm/` and for `aksharamukha-v5.js` itself (Node's
+built-in `zlib` Brotli codec) - the bundle is plain JS text and
+compresses just as well as the other JS glue files below. Pass
+`--skip-compression` to skip the bundle's (engine files are always
+compressed when copied).
 Measured effect on the real files:
 
 | File | Original | `.br` | Reduction |
@@ -318,7 +333,7 @@ pre-compression). **Real embeds - anything you'd actually tell someone to
 paste into their site - must pin a tag, not track `master`:**
 
 ```html
-<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@v5.0.13/aksharamukha-v5.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@v5.0.15/aksharamukha-v5.js"></script>
 ```
 
 jsDelivr treats a tag-pinned path as immutable and caches it long-term,
@@ -332,30 +347,31 @@ snippet to move forward):
 1. Land whatever changes you're releasing on `master` as normal.
 2. Run `node build-scripts/build-web-plugin-v5.js` - **without**
    `--skip-compression`, so `aksharamukha-v5.js.br` is rebuilt to match
-   (CI fails if the two differ) - and commit the resulting
-   `aksharamukha-v5.js`, `aksharamukha-v5.js.br`, `fonts.css`, and
-   `src/script-data.generated.js` if they changed. The build needs the
-   `aksharamukha` monorepo checked out as a sibling and network access (to
-   pin `fonts.css`'s font import to the `aksharamukha-fonts` repo's
-   current commit); without either, it keeps the existing files and warns.
-3. If Pyodide or a wheel version changed: run
-   `pwsh build-scripts/copy-wasm-assets.ps1`, review the size/diff of
-   `wasm/` (this is the one step that can meaningfully bloat repo
-   history - it's a full binary replacement, not a diffable text change),
-   and commit it. Also bump `WASM_CACHE_NAME` in `src/v5-plugin.js` (e.g.
-   `aksharamukha-wasm-v1` → `-v2`) and update `AKSHARAMUKHA_WHEEL` /
-   `DEP_WHEELS` there if file names changed. Visitors' browsers keep the
-   engine files in Cache Storage by URL and never re-check them, so
-   anyone loading `wasm/` from a URL that doesn't change between versions
-   (a self-hosted copy, or an unpinned CDN path) would otherwise keep the
-   old engine indefinitely. Tag-pinned CDN embeds get new URLs anyway.
-4. Tag the commit: `git tag -a v5.1.0 -m "..."` (bump the version
+   (CI fails if the two differ, or if the committed bundle isn't what the
+   build produces). The build needs the `aksharamukha` monorepo and
+   `aksharamukha-python` checked out as siblings, and network access (to
+   pin `fonts.css`'s font import to the `aksharamukha-fonts` repo's current
+   commit); without them it keeps the existing files and warns.
+3. **If it says the engine changed upstream:** review the `wasm/` changes
+   (the one step that can meaningfully bloat repo history - binary
+   replacements, not diffable text), commit `wasm/`, and run the build
+   again. If the Pyodide runtime itself changed, also bump
+   `WASM_CACHE_NAME` in `src/v5-plugin.js` (e.g. `aksharamukha-wasm-v1` →
+   `-v2`), and update `DEP_WHEELS` there if the build says those file names
+   changed. Visitors' browsers keep engine files in Cache Storage by URL and
+   never re-check them; jsDelivr embeds get new URLs when the engine
+   changes anyway, but a self-hosted copy keeps the same URLs.
+4. Commit the resulting `aksharamukha-v5.js`, `aksharamukha-v5.js.br`,
+   `fonts.css` and `src/script-data.generated.js` if they changed. Push
+   the commits before or with the tag - the bundle points visitors at the
+   engine's commit, which has to be on GitHub.
+5. Tag the commit: `git tag -a v5.1.0 -m "..."` (bump the version
    sensibly; these don't have to map 1:1 to semver, just be unique and
    ordered) and `git push origin v5.1.0` (and `git push` the commits too).
-5. Update embed snippets that should move to the new version - in this
+6. Update embed snippets that should move to the new version - in this
    README, the root README, and anywhere else you've told people to
    paste a snippet from - to the new `@vX.Y.Z` tag.
-6. Leave old tags (`@v5.0.3`, etc.) in place, forever - anyone who pinned
+7. Leave old tags (`@v5.0.3`, etc.) in place, forever - anyone who pinned
    one is relying on it never changing, same principle as `v2.js`/`v3.js`
    staying frozen.
 
