@@ -84,7 +84,7 @@ function syncFontsCss (monorepoPath) {
     console.warn('Skipping fonts.css sync: could not look up ' + FONTS_REPO + ' HEAD. Using the existing fonts.css as-is.')
     return
   }
-  const css = fs.readFileSync(src, 'utf8')
+  const css = fs.readFileSync(src, 'utf8').replace(/\r\n/g, '\n')
   if (css.indexOf(FONTS_CDN_UNPINNED) === -1) {
     throw new Error(src + " no longer imports from " + FONTS_CDN_UNPINNED + " - update syncFontsCss() to pin whatever it uses now.")
   }
@@ -121,7 +121,11 @@ function main () {
     ' * script.\n' +
     ' */\n'
 
-  const out = banner + '(function () {\n"use strict";\n' + dataSrc + '\n' + pluginSrc + '\n})();\n'
+  // LF only: on a Windows checkout the sources can contain CRLFs (e.g.
+  // comments carried over from ScriptMixin.js). Git normalizes the .js to
+  // LF on commit but stores the .br as-is, so without this the committed
+  // .br wouldn't decompress to the committed .js (CI checks they match).
+  const out = (banner + '(function () {\n"use strict";\n' + dataSrc + '\n' + pluginSrc + '\n})();\n').replace(/\r\n/g, '\n')
 
   fs.writeFileSync(OUT_FILE, out, 'utf8')
   console.log('Wrote ' + path.relative(process.cwd(), OUT_FILE) + ' (' + (out.length / 1024).toFixed(1) + ' KB)')
