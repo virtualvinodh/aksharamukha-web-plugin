@@ -210,9 +210,10 @@ server (`tests/static-server.js`) automatically, the same way
 needed - just `npm test`. Add `--project=chromium` (or `firefox`,
 `webkit`) to run a single browser.
 
-Playwright's WebKit build for Windows can't keep Cache Storage between
-page loads (unlike Safari itself), so the few tests that need saved
-engine files are skipped there; they run in WebKit on Linux in CI.
+Playwright's WebKit loses Cache Storage between page loads in the
+temporary profiles tests normally use (unlike Safari itself), so the few
+tests that need saved engine files are skipped in WebKit; one test
+covers them there with a persistent profile instead.
 
 These are integration tests, not isolated unit tests: they hit the live
 hosted API (`aksharamukha-plugin.appspot.com`) for every conversion, so a

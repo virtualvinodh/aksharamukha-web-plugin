@@ -1,5 +1,5 @@
 // @ts-check
-const { test, expect, devices } = require('@playwright/test')
+const { test, expect, devices, webkit } = require('@playwright/test')
 const { selectScript, openOptions } = require('./helpers')
 
 // engine=api everywhere: no WASM cold start to wait through, keeps this
@@ -12,12 +12,13 @@ const DEMO = '/demo-v5-api.html'
 // How many engine files the build lists (everything in wasm/pyodide and wasm/wheel).
 const ENGINE_FILE_COUNT = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '..', 'aksharamukha-v5.js'), 'utf8').match(/^var ENGINE_FILES = (.*)$/m)[1]).length
 
-// Playwright's WebKit build for Windows can't keep Cache Storage from one page
-// load to the next (its writes to disk fail), unlike Safari itself - so tests
-// that rely on engine files saved by an earlier page load are skipped there.
-// They still run in WebKit on Linux (CI) and in the other browsers.
-const cacheStorageNotKept = browserName => browserName === 'webkit' && process.platform === 'win32'
-const SKIP_REASON = "Playwright's WebKit for Windows doesn't keep Cache Storage between page loads"
+// Playwright's WebKit loses Cache Storage from one page load to the next in
+// its usual temporary profiles (on Windows and Linux), unlike Safari - so
+// tests that rely on engine files saved by an earlier page load are skipped
+// there. "in Safari's engine, with a real profile..." below covers WebKit
+// with a persistent profile, where the files are kept.
+const cacheStorageNotKept = browserName => browserName === 'webkit'
+const SKIP_REASON = "Playwright's WebKit doesn't keep Cache Storage between page loads in a temporary profile"
 
 test('fresh visit opens the panel; converts on selection', async ({ page }) => {
   await page.goto(DEMO)
@@ -236,6 +237,7 @@ test('faint text meets the recommended contrast on the default white panel', asy
 
 test('a browser that doesn\'t keep the saved engine files isn\'t made to download them on every page view', async ({ page, browserName }) => {
   test.skip(cacheStorageNotKept(browserName), SKIP_REASON)
+  test.setTimeout(120000) // downloads the whole engine
   // e.g. writes failing, storage full, or storage that doesn't last between
   // page views: without a guard the ~9MB download repeated every page view.
   let engineRequests = 0
@@ -257,6 +259,7 @@ test('a browser that doesn\'t keep the saved engine files isn\'t made to downloa
 
 test('on a site whose Content-Security-Policy blocks the engine, conversions quietly use the API', async ({ page, browserName }) => {
   test.skip(cacheStorageNotKept(browserName), SKIP_REASON)
+  test.setTimeout(120000) // downloads the whole engine
   // The engine runs in a worker made from a blob: address, which a strict
   // policy can forbid. Save the engine files first, so the plugin chooses
   // the engine, then load a page whose policy doesn't allow the worker.
@@ -273,7 +276,7 @@ test('on a site whose Content-Security-Policy blocks the engine, conversions qui
   const apiCall = page.waitForRequest(r => r.url().includes('appspot.com'))
   await selectScript(page, 'Tamil')
   await apiCall
-  expect(warnings.join(' ')).toMatch(/Aksharamukha: .*(engine failed|failed to start)/) // the engine was tried
+  await expect.poll(() => warnings.join(' ')).toMatch(/Aksharamukha: .*(engine failed|failed to start)/) // the engine was tried
   await expect(page.locator('.aksharamukha-text')).toContainText(/[஀-௿]/, { timeout: 30000 })
 })
 
@@ -290,6 +293,7 @@ test('on a site that allows styles only by nonce, the panel is still styled', as
 
 test('older copies of the engine saved under another address are deleted once the current one is saved', async ({ page, browserName }) => {
   test.skip(cacheStorageNotKept(browserName), SKIP_REASON)
+  test.setTimeout(120000) // downloads the whole engine
   // Older plugin versions saved the ~20MB engine under their own folder;
   // those copies were never cleaned up.
   const stale = 'https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@v5.0.8/wasm/pyodide/pyodide.asm.wasm'
@@ -779,6 +783,7 @@ test('output font class beats a lang-keyed host rule and a <pre> UA default', as
 
 test('a first visit downloads the engine files without starting the engine; later page views do nothing in the background', async ({ page, browserName }) => {
   test.skip(cacheStorageNotKept(browserName), SKIP_REASON)
+  test.setTimeout(120000) // downloads the whole engine
   // Starting the engine costs seconds of processing and ~90MB of memory,
   // so readers who never convert shouldn't pay it on every page view. The
   // files are still downloaded once, so later conversions don't need the
@@ -865,6 +870,30 @@ test.describe('engine start-up', () => {
     await page.reload()
     await expect(page.locator('.aksharamukha-text').first()).toContainText('நமஸ்தே', { timeout: 120000 })
     expect(apiRequests.length).toBe(0)
+  })
+
+  test('in Safari\'s engine, with a real profile, a returning visitor converts without the API', async ({ browserName }, testInfo) => {
+    // The test above, in the persistent kind of WebKit profile a Safari user
+    // has - the temporary ones the other tests use lose Cache Storage.
+    test.skip(browserName !== 'webkit', 'the other browsers run the test above')
+    const profile = require('fs').mkdtempSync(require('path').join(require('os').tmpdir(), 'aksharamukha-webkit-'))
+    const context = await webkit.launchPersistentContext(profile, { baseURL: testInfo.project.use.baseURL })
+    try {
+      const page = await context.newPage()
+      const apiRequests = []
+      page.on('request', r => { if (r.url().includes('appspot.com')) apiRequests.push(r) })
+      await page.goto('/demo-v5.html')
+      await expect.poll(() => page.evaluate(async () => (await (await caches.open('aksharamukha-wasm-v1')).keys()).length), { timeout: 120000 }).toBe(ENGINE_FILE_COUNT)
+
+      await page.evaluate(() => localStorage.setItem('target', 'Tamil'))
+      apiRequests.length = 0
+      await page.reload()
+      await expect(page.locator('.aksharamukha-text').first()).toContainText('நமஸ்தே', { timeout: 120000 })
+      expect(apiRequests.length).toBe(0)
+    } finally {
+      await context.close()
+      require('fs').rmSync(profile, { recursive: true, force: true })
+    }
   })
 
   test('clicking into the search box starts the engine, and a pick then converts without the API or re-downloading', async ({ page, browserName }) => {
