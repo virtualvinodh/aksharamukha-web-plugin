@@ -6,11 +6,19 @@ launcher appears letting visitors pick a target script.
 
 ```html
 <div class="aksharamukha-text">आपका पाठ यहाँ जाएगा</div>
-<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@v5.0.18/aksharamukha-v5.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@5/aksharamukha-v5.js" defer></script>
 ```
 
-That `@v5.0.18` matters - see "Releasing a new version" below for why real
-embeds should always pin a tag like this instead of tracking `master`.
+`@5` always serves the newest `v5.x.y` release, so a site picks up fixes
+without changing its embed. It only ever moves to a tagged release, never
+to untested commits on `main`. Updates reach visitors gradually: jsDelivr
+re-checks for a new release every 12 hours (or immediately after a purge
+- see "Releasing a new version"), and a returning visitor's browser can
+keep the previous release for up to 7 days.
+
+To stay on one exact release instead (nothing changes until you edit the
+embed), pin its tag, e.g. `@v5.0.18`. Never track `main` - see
+"Releasing a new version" below.
 
 `aksharamukha-v5.js` is the current version. `aksharamukha-v2.js`/`v3.js`/`v4.js`
 are kept only so existing sites that already load them don't break - do not
@@ -342,7 +350,7 @@ added Binaryen build dependency for that little.)
 
 ## Releasing a new version
 
-**⚠️ Read this before pushing to `master` and telling anyone to embed a new
+**⚠️ Read this before pushing to `main` and telling anyone to embed a new
 version.**
 
 `wasm/` (the ~19MB Pyodide runtime + wheels, plus their `.br` siblings) is
@@ -354,30 +362,42 @@ serves a repo's file tree at a given ref - it can't reach into a GitHub
 Release's attached assets - so there's no way to keep `wasm/` out of the
 git tree and still get that one-link experience through jsDelivr.
 
-That means **every commit here changes what a `master`-tracking jsDelivr
+That means **every commit here changes what a `main`-tracking jsDelivr
 link serves**, `wasm/` included. jsDelivr also gives unpinned/branch paths
 a much shorter cache lifetime than a pinned tag or commit (which it treats
 as immutable and caches long-term, since the content there can never
-change) - so an embed that tracks `master` can end up re-downloading the
+change) - so an embed that tracks `main` can end up re-downloading the
 full payload far more often than one pinned to a tag, on top of serving
 whatever's newest (possibly untested) at any given moment. Both defeat
 the point of the caching work in this repo (Cache Storage, `.br`
 pre-compression). **Real embeds - anything you'd actually tell someone to
-paste into their site - must pin a tag, not track `master`:**
+paste into their site - use `@5` (the newest v5 release) or pin a tag,
+never track `main`:**
 
 ```html
-<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@v5.0.18/aksharamukha-v5.js"></script>
+<!-- follows every v5.x.y release -->
+<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@5/aksharamukha-v5.js" defer></script>
+<!-- one exact release, never changes -->
+<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@v5.0.18/aksharamukha-v5.js" defer></script>
 ```
 
 jsDelivr treats a tag-pinned path as immutable and caches it long-term,
-exactly like a pinned npm/CDN package version. `@master` (or no `@` at
+exactly like a pinned npm/CDN package version. `@5` is a version range:
+jsDelivr resolves it to the highest `v5.x.y` tag (re-checked every 12
+hours; browsers may keep a copy up to 7 days). `@main` (or no `@` at
 all, which jsDelivr treats the same way) is fine for **your own** testing
 of the latest commit, never for a snippet you hand to someone else.
+
+Because `@5` follows tags automatically, **pushing a `v5.x.y` tag is the
+release** - every `@5` site gets it with no further step. Only tag what
+passed CI, and put a change that would break existing embeds (renamed
+query parameters, different markup) in a `v6.0.0` instead, which `@5`
+sites never pick up.
 
 **Checklist for every release** (i.e. whenever you want the public embed
 snippet to move forward):
 
-1. Land whatever changes you're releasing on `master` as normal.
+1. Land whatever changes you're releasing on `main` as normal.
 2. Run `node build-scripts/build-web-plugin-v5.js` - **without**
    `--skip-compression`, so `aksharamukha-v5.js.br` is rebuilt to match
    (CI fails if the two differ, or if the committed bundle isn't what the
@@ -398,13 +418,22 @@ snippet to move forward):
    `fonts.css` and `src/script-data.generated.js` if they changed. Push
    the commits before or with the tag - the bundle points visitors at the
    engine's commit, which has to be on GitHub.
-5. Tag the commit: `git tag -a v5.1.0 -m "..."` (bump the version
-   sensibly; these don't have to map 1:1 to semver, just be unique and
-   ordered) and `git push origin v5.1.0` (and `git push` the commits too).
-6. Update embed snippets that should move to the new version - in this
-   README, the root README, and anywhere else you've told people to
-   paste a snippet from - to the new `@vX.Y.Z` tag.
-7. Leave old tags (`@v5.0.3`, etc.) in place, forever - anyone who pinned
+5. Once CI has passed on that commit, tag it: `git tag -a v5.1.0 -m "..."`
+   and `git push origin v5.1.0`. Always `vMAJOR.MINOR.PATCH` - `@5`
+   only follows tags in that form.
+6. Make `@5` sites get it now rather than within 12 hours, by purging
+   jsDelivr's copy of each `@5` file:
+   ```sh
+   for f in aksharamukha-v5.js fonts.css icon.png; do
+     curl -s "https://purge.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@5/$f"
+   done
+   curl -sI https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@5/aksharamukha-v5.js | grep x-jsd-version
+   ```
+   The last line should print the new version.
+7. Update embed snippets that pin an exact tag - in this README, the root
+   README, and anywhere else you've told people to paste a snippet from -
+   to the new `@vX.Y.Z` tag.
+8. Leave old tags (`@v5.0.3`, etc.) in place, forever - anyone who pinned
    one is relying on it never changing, same principle as `v2.js`/`v3.js`
    staying frozen.
 
