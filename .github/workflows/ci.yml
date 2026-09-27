@@ -52,7 +52,7 @@ jobs:
       # Tests hit the live hosted API (aksharamukha-plugin.appspot.com) as
       # part of engine=api - these are integration tests, not isolated
       # unit tests, so a transient network/API issue can fail this step
-      # independent of the plugin's own code. See README-v5-plugin.md.
+      # independent of the plugin's own code. See README.md.
       - name: Run tests
         run: npm test
 

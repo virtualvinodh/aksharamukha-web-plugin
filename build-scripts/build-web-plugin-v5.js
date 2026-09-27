@@ -22,7 +22,7 @@
  * bundle is plain JS text and compresses extremely well (measured ~80%
  * smaller). Same as wasm/'s .br siblings, this does nothing by itself:
  * your host/CDN has to actually serve it in place of the original with a
- * Content-Encoding: br header - see README-v5-plugin.md's "Serving
+ * Content-Encoding: br header - see README.md's "Serving
  * pre-compressed assets" section. Pass --skip-compression to skip it.
  *
  * Usage: node build-scripts/build-web-plugin-v5.js [monorepo-path] [--engine-from=<path>] [--skip-compression]

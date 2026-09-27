@@ -11,6 +11,7 @@ const { defineConfig, devices } = require('@playwright/test')
 // integration tests, not fully isolated unit tests.
 module.exports = defineConfig({
   testDir: './tests',
+  globalSetup: require.resolve('./tests/warm-api.js'),
   timeout: 30000,
   fullyParallel: true,
   retries: process.env.CI ? 1 : 0,

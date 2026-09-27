@@ -210,10 +210,35 @@ test('launcher badge shows the current script name, not an abbreviation, and "Ch
   await page.click('#aksharamukha-pluginhidebutton')
   await expect(page.locator('#aksharamukha-launcher-label')).toHaveText('Kannada')
   await expect(page.locator('#aksharamukha-launcher')).toHaveClass(/aksharamukha-has-label/)
+  // Its accessible name starts with what it shows, so screen-reader users
+  // hear which script the page is in (it used to be a fixed "Open script
+  // converter").
+  await expect(page.locator('#aksharamukha-launcher')).toHaveAttribute('aria-label', 'Kannada – change script')
 
   await selectScript(page, 'Original script')
   await expect(page.locator('#aksharamukha-launcher-label')).toHaveText('Change script')
   await expect(page.locator('#aksharamukha-launcher')).toHaveClass(/aksharamukha-has-label/)
+  await expect(page.locator('#aksharamukha-launcher')).toHaveAttribute('aria-label', 'Change script')
+})
+
+test('faint text meets the recommended contrast on the default white panel', async ({ page }) => {
+  await page.goto(DEMO)
+  // #6b7080 on white is about 4.9:1 (the old #8a8f9c was about 3.2:1).
+  await expect(page.locator('#aksharamukha-branding')).toHaveCSS('color', 'rgb(107, 112, 128)')
+})
+
+test('older copies of the engine saved under another address are deleted once the current one is saved', async ({ page }) => {
+  // Older plugin versions saved the ~20MB engine under their own folder;
+  // those copies were never cleaned up.
+  const stale = 'https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@v5.0.8/wasm/pyodide/pyodide.asm.wasm'
+  await page.goto(DEMO) // engine=api: doesn't touch the saved engine
+  await page.evaluate(async url => {
+    await (await caches.open('aksharamukha-wasm-v1')).put(url, new Response('an old engine file'))
+  }, stale)
+  await page.goto('/demo-v5.html') // first visit: downloads the current engine
+  const saved = () => page.evaluate(async () => (await (await caches.open('aksharamukha-wasm-v1')).keys()).map(r => r.url))
+  await expect.poll(async () => (await saved()).includes(stale), { timeout: 60000 }).toBe(false)
+  expect((await saved()).length).toBe(ENGINE_FILE_COUNT)
 })
 
 test('"Original script" reverts converted text back to the source', async ({ page }) => {

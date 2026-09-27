@@ -458,6 +458,7 @@ var Engine = (function () {
           notifyProgress('')
           progressListeners = []
           resolve()
+          dropOtherEngineCopies()
         } else if (msg.type === 'init-error') {
           reject(fail(new Error(msg.message)))
         } else if (msg.type === 'result') {
@@ -620,9 +621,30 @@ var Engine = (function () {
             })
           })
         }))
-      }).then(function () { filesCachedCheck = Promise.resolve(true) })
+      }).then(function () {
+        filesCachedCheck = Promise.resolve(true)
+        dropOtherEngineCopies()
+      })
     }
     return downloading
+  }
+
+  // Once this page has the current engine's files, deletes saved copies
+  // from any other address: older plugin versions saved the engine under
+  // their own folder (…@v5.0.8/wasm/…), and an engine update moves it to
+  // a new commit. Safe now that the address only changes when the engine
+  // itself does - different plugin versions on one site share it, so they
+  // can't keep deleting each other's copy.
+  function dropOtherEngineCopies () {
+    if (!window.caches) return
+    var base = Config.wasmBase.href
+    caches.open(WASM_CACHE_NAME).then(function (cache) {
+      return cache.keys().then(function (requests) {
+        return Promise.all(requests
+          .filter(function (request) { return request.url.indexOf(base) !== 0 })
+          .map(function (request) { return cache.delete(request) }))
+      })
+    }).catch(function () {})
   }
 
   // engine=auto routing. The engine is preferred whenever using it costs no
@@ -1089,8 +1111,6 @@ var Panel = (function () {
     launcher.type = 'button'
     launcher.id = 'aksharamukha-launcher'
     launcher.className = 'aksharamukha-printhide'
-    launcher.title = 'Convert script (Aksharamukha)'
-    launcher.setAttribute('aria-label', 'Open script converter')
     launcher.innerHTML = '<img src="' + ICON_URL + '" width="22px" alt=""/>' +
       '<span id="aksharamukha-launcher-label"></span>'
     document.body.appendChild(launcher)
@@ -1315,6 +1335,7 @@ var Panel = (function () {
     // owners relying on that wording noticed its absence).
     els.launcherLabel.textContent = value !== 'Original' && match ? match.label : 'Change script'
     els.launcher.classList.add('aksharamukha-has-label')
+    updateLauncherName()
     leaveSearchBox()
     // Deliberately does NOT auto-collapse the panel on a pick: someone
     // comparing scripts or fine-tuning post-options wants to keep making
@@ -1590,8 +1611,22 @@ var Panel = (function () {
     // on load), so the loading state needs its own visible indicator on
     // the launcher, or it happens invisibly for ~15-20s with no feedback.
     els.launcher.classList.toggle('is-loading', !!isLoading)
-    els.launcher.setAttribute('aria-label', isLoading ? (message || 'Loading…') : 'Open script converter')
-    els.launcher.title = isLoading ? (message || 'Loading…') : 'Convert script (Aksharamukha)'
+    launcherLoading = isLoading ? (message || 'Loading…') : null
+    updateLauncherName()
+  }
+
+  // The badge's accessible name (and tooltip) starts with the text it shows
+  // - "Tamil", or "Change script" on the original - as accessibility
+  // guidelines ask for. It used to be a fixed "Open script converter", so a
+  // screen-reader user couldn't tell which script the page was in.
+  var launcherLoading = null // the loading message while a conversion runs
+  function updateLauncherName () {
+    var shown = els.launcherLabel.textContent
+    var name = launcherLoading
+      ? shown + ' – ' + launcherLoading
+      : (shown === 'Change script' ? shown : shown + ' – change script')
+    els.launcher.setAttribute('aria-label', name)
+    els.launcher.title = name
   }
 
   function setError (message) {
@@ -1630,7 +1665,7 @@ var Panel = (function () {
 // setting these on :root (or any ancestor of <body>) in its own
 // stylesheet - custom properties inherit normally regardless of which
 // <style> tag declared the rule using them - without forking this file.
-// Documented in README-v5-plugin.md's "Theming" section.
+// Documented in README.md's "Theming" section.
 var PANEL_CSS = '\n' +
   '#aksharamukha-navbar, #aksharamukha-navbar * { box-sizing: border-box; }\n' +
   '#aksharamukha-navbar { position: fixed; font-family: var(--aksharamukha-font, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif); width: 220px; padding: 14px 16px 12px; border-radius: var(--aksharamukha-radius, 12px); background: var(--aksharamukha-bg, #fff); border: 1px solid var(--aksharamukha-border, #e7e8ee); box-shadow: 0 4px 18px rgba(20,20,40,.08); z-index: 1000; }\n' +
@@ -1646,8 +1681,8 @@ var PANEL_CSS = '\n' +
   '#aksharamukha-listbox li[role="option"] { padding: 6px 12px; font-size: 13px; color: var(--aksharamukha-text, #1f2430); cursor: pointer; }\n' +
   '#aksharamukha-listbox li[role="option"]:hover, #aksharamukha-listbox li.is-active { background: var(--aksharamukha-accent-tint, #f2f0ff); }\n' +
   '#aksharamukha-listbox li.is-selected { font-weight: 600; color: var(--aksharamukha-accent-strong, #4b3fd6); }\n' +
-  '.aksharamukha-optgroup-label { padding: 8px 12px 2px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--aksharamukha-text-faint, #9aa0ab); }\n' +
-  '.aksharamukha-empty { padding: 8px 12px; font-size: 12px; color: var(--aksharamukha-text-faint, #9aa0ab); }\n' +
+  '.aksharamukha-optgroup-label { padding: 8px 12px 2px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--aksharamukha-text-faint, #6b7080); }\n' +
+  '.aksharamukha-empty { padding: 8px 12px; font-size: 12px; color: var(--aksharamukha-text-faint, #6b7080); }\n' +
   '#aksharamukha-navbar button { font-family: inherit; font-size: 12px; font-weight: 500; color: var(--aksharamukha-text-muted, #4a4f5c); background: #f4f5f8; border: 1px solid #e2e4ea; border-radius: 6px; padding: 4px 10px; cursor: pointer; margin-top: 8px; }\n' +
   '#aksharamukha-navbar button:hover { background: var(--aksharamukha-accent-tint, #ebe9ff); border-color: #c9c3ff; color: var(--aksharamukha-accent-strong, #4b3fd6); }\n' +
   '#options { margin-top: 6px; padding-top: 6px; border-top: 1px solid #edeef2; }\n' +
@@ -1669,9 +1704,9 @@ var PANEL_CSS = '\n' +
   '.aksharamukha-chip.is-open .aksharamukha-tooltip { visibility: visible; opacity: 1; }\n' +
   '.aksharamukha-hidedown { display: none; }\n' +
   '.aksharamukha-showup { display: block; }\n' +
-  '#aksharamukha-loading { min-height: 14px; margin-top: 4px; font-size: 11px; color: var(--aksharamukha-text-faint, #8a8f9c); }\n' +
+  '#aksharamukha-loading { min-height: 14px; margin-top: 4px; font-size: 11px; color: var(--aksharamukha-text-faint, #6b7080); }\n' +
   '#aksharamukha-error { margin-top: 6px; font-size: 11px; color: #a8352a; }\n' +
-  '#aksharamukha-branding { margin-top: 10px; padding-top: 8px; border-top: 1px solid #edeef2; font-size: 90%; color: var(--aksharamukha-text-faint, #8a8f9c); }\n' +
+  '#aksharamukha-branding { margin-top: 10px; padding-top: 8px; border-top: 1px solid #edeef2; font-size: 90%; color: var(--aksharamukha-text-faint, #6b7080); }\n' +
   'a.aksharamukha-hyperlink, a.aksharamukha-hyperlink:visited { text-decoration: none; color: var(--aksharamukha-text-muted, #4a4f5c); }\n' +
   'a.aksharamukha-hyperlink:hover { color: var(--aksharamukha-accent, #6c63ff); }\n' +
   '.aksharamukha-progressbar { height: 3px; border-radius: 2px; background: #eeedf7; overflow: hidden; margin-top: 6px; display: none; }\n' +
