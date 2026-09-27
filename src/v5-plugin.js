@@ -318,8 +318,10 @@ var Engine = (function () {
     ready = false
     notifyProgress('')
     progressListeners = []
-    Object.keys(pending).forEach(function (id) { pending[id].reject(err) })
+    queue.splice(0).forEach(function (item) { item.reject(err) })
+    var inFlight = pending
     pending = {}
+    Object.keys(inFlight).forEach(function (id) { inFlight[id].reject(err) })
     return err
   }
 
@@ -373,22 +375,64 @@ var Engine = (function () {
     return readyPromise
   }
 
-  async function convertOneWasm (job) {
+  // Conversions go to the engine one at a time, from a queue kept here. The
+  // engine works through everything it's sent, so a conversion already sent
+  // can't be dropped - but one still waiting here can: when a newer pick
+  // supersedes it (its run's AbortSignal fires), it's removed before the
+  // engine ever starts on it. Otherwise picking several scripts quickly on
+  // a large page made the last pick wait for every one before it.
+  var queue = []
+  var busy = false
+
+  function abortError () {
+    return new DOMException('Superseded by a newer conversion.', 'AbortError')
+  }
+
+  function pump () {
+    if (busy || failed) return
+    var item
+    while ((item = queue.shift()) && item.signal && item.signal.aborted) item.reject(abortError())
+    if (!item) return
+    busy = true
+    var id = nextId++
+    pending[id] = {
+      resolve: function (result) { busy = false; item.resolve(result); pump() },
+      reject: function (err) { busy = false; item.reject(err); pump() }
+    }
+    var job = item.job
+    worker.postMessage({
+      type: 'convert',
+      id: id,
+      source: job.source,
+      target: job.target,
+      text: job.text,
+      nativize: job.nativize,
+      preOptions: job.preOptions || [],
+      postOptions: job.postOptions || []
+    })
+  }
+
+  async function convertOneWasm (job, signal) {
+    // A first-visit download still running (e.g. a very large page needing
+    // the engine straight away): let it finish instead of the engine
+    // fetching the same files a second time.
+    if (downloading && !readyPromise) await downloading.catch(function () {})
     await initWasm(job.onProgress)
     if (failed) throw new Error('The conversion engine is not available.')
+    if (signal && signal.aborted) throw abortError()
     return new Promise(function (resolve, reject) {
-      var id = nextId++
-      pending[id] = { resolve: resolve, reject: reject }
-      worker.postMessage({
-        type: 'convert',
-        id: id,
-        source: job.source,
-        target: job.target,
-        text: job.text,
-        nativize: job.nativize,
-        preOptions: job.preOptions || [],
-        postOptions: job.postOptions || []
-      })
+      var item = { job: job, signal: signal, resolve: resolve, reject: reject }
+      queue.push(item)
+      if (signal) {
+        signal.addEventListener('abort', function () {
+          var i = queue.indexOf(item)
+          if (i > -1) {
+            queue.splice(i, 1)
+            reject(abortError())
+          }
+        }, { once: true })
+      }
+      pump()
     })
   }
 
@@ -413,9 +457,10 @@ var Engine = (function () {
   async function convertOne (job, useWasm, signal) {
     if (!useWasm) return convertOneApi(job, signal)
     try {
-      return await convertOneWasm(job)
+      return await convertOneWasm(job, signal)
     } catch (e) {
-      if (Config.engine === 'wasm') throw e
+      // Superseded by a newer pick: not a failure, so no API fallback.
+      if (e.name === 'AbortError' || Config.engine === 'wasm') throw e
       console.warn('Aksharamukha: WASM engine failed, falling back to API.', e)
       return convertOneApi(job, signal)
     }
@@ -427,22 +472,50 @@ var Engine = (function () {
     return total
   }
 
-  // True if an earlier page view on this site already downloaded the
-  // engine into Cache Storage - starting it then needs no download, only
-  // its start-up, which runs in the worker without blocking the page.
+  // True if every engine file is already saved in Cache Storage (by an
+  // earlier page view's download) - starting the engine then needs no
+  // download, only its start-up, which runs in the worker.
   var filesCachedCheck = null
   function engineFilesCached () {
     if (!filesCachedCheck) {
       filesCachedCheck = !window.caches
         ? Promise.resolve(false)
         : caches.open(WASM_CACHE_NAME).then(function (cache) {
-          return Promise.all([
-            cache.match(wasmUrl('pyodide/pyodide.asm.wasm')),
-            cache.match(wasmUrl('wheel/' + AKSHARAMUKHA_WHEEL))
-          ])
-        }).then(function (hits) { return !!(hits[0] && hits[1]) }).catch(function () { return false })
+          return Promise.all(ENGINE_FILES.map(function (file) { return cache.match(wasmUrl(file)) }))
+        }).then(function (hits) { return hits.every(Boolean) }).catch(function () { return false })
     }
     return filesCachedCheck
+  }
+
+  // A visitor's first page view: save the engine files for later page
+  // views WITHOUT starting the engine. Starting it (loading Python,
+  // importing aksharamukha) costs seconds of processing and ~90MB of
+  // memory, worth paying only once a conversion needs it - while the
+  // download itself only ever happens once per site.
+  var downloading = null
+  function downloadEngineFiles () {
+    if (!downloading) {
+      downloading = caches.open(WASM_CACHE_NAME).then(function (cache) {
+        // Same clean-up the worker does: drop caches from an older
+        // WASM_CACHE_NAME, which are never used again.
+        caches.keys().then(function (names) {
+          names.forEach(function (name) {
+            if (name.indexOf('aksharamukha-wasm-') === 0 && name !== WASM_CACHE_NAME) caches.delete(name)
+          })
+        }).catch(function () {})
+        return Promise.all(ENGINE_FILES.map(function (file) {
+          var url = wasmUrl(file)
+          return cache.match(url).then(function (hit) {
+            if (hit) return
+            return fetch(url).then(function (res) {
+              if (!res.ok) throw new Error('Failed to download ' + url + ' (' + res.status + ')')
+              return cache.put(url, res)
+            })
+          })
+        }))
+      }).then(function () { filesCachedCheck = Promise.resolve(true) })
+    }
+    return downloading
   }
 
   // engine=auto routing. The engine is preferred whenever using it costs no
@@ -504,18 +577,38 @@ var Engine = (function () {
     return results
   }
 
-  // Fire-and-forget: starts the engine (downloading it on a first visit)
-  // in the background, so it's ready for this page's later conversions and
-  // cached for the next page view. Runs in the worker, so it doesn't block
-  // the page.
-  function warmUp () {
-    if (Config.engine === 'api') return
+  function start () {
     initWasm().catch(function (e) {
-      console.warn('Aksharamukha: background WASM warm-up failed (conversions will use the API).', e)
+      console.warn('Aksharamukha: the conversion engine failed to start (conversions will use the API).', e)
     })
   }
 
-  return { convertAll: convertAll, warmUp: warmUp }
+  // On page load, once the browser is idle. engine=auto doesn't start the
+  // engine here - that happens when a conversion needs it, or when the
+  // visitor opens the picker (startIfCached) - and only downloads its
+  // files on the visitor's first page view on the site. engine=wasm starts
+  // it straight away.
+  function prepare () {
+    if (Config.engine === 'api') return
+    if (Config.engine === 'wasm') { start(); return }
+    if (readyPromise || failed || !window.caches) return
+    engineFilesCached().then(function (cached) {
+      if (!cached && !readyPromise) return downloadEngineFiles()
+    }).catch(function (e) {
+      console.warn('Aksharamukha: could not download the conversion engine in the background (conversions will use the API).', e)
+    })
+  }
+
+  // The visitor opened the picker: start the engine, so it's likely ready
+  // by the time they pick. Not while its files are still downloading on a
+  // first visit - starting it then would download them a second time;
+  // those picks use the API until the download is done.
+  function startIfCached () {
+    if (Config.engine === 'api' || readyPromise || failed) return
+    engineFilesCached().then(function (cached) { if (cached) start() })
+  }
+
+  return { convertAll: convertAll, prepare: prepare, startIfCached: startIfCached }
 })()
 
 // ---------------------------------------------------------------------------
@@ -532,19 +625,89 @@ var Content = (function () {
   // converted, if a target is already selected) as they appear, and this
   // is now cheap to do per-element because WASM conversions have no
   // per-request network cost to batch away.
-  var registry = new WeakMap() // el -> { texts, appliedOutputClass }
+  var registry = new WeakMap() // el -> { appliedOutputClass, langs, fontCarriers, version }
   var elements = [] // insertion-ordered list of currently known elements
   var observer = null
 
-  function captureTexts (el) {
+  // The original (unconverted) text is tracked per text node rather than
+  // as one snapshot of each element taken at start-up - a snapshot went
+  // stale when the page changed its own text later, and the next pick then
+  // wrote the OLD text back over the page's new text, converted. A node the
+  // plugin hasn't seen yet holds original text by definition (the plugin
+  // only ever changes the text of nodes it already knows), and when the
+  // page changes a node's text, that becomes its original (see textWatcher).
+  var originalText = new WeakMap() // text node -> its original text
+  var pluginWrote = new WeakMap() // text node -> the text the plugin last wrote into it
+
+  function textNodes (el) {
     var walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null, false)
-    var texts = []
+    var nodes = []
     var node
     while ((node = walker.nextNode())) {
-      if (node.nodeValue.trim() !== '') texts.push(node.nodeValue)
+      if (node.nodeValue.trim() !== '') nodes.push(node)
     }
-    return texts
+    return nodes
   }
+
+  function originalOf (node) {
+    if (!originalText.has(node)) originalText.set(node, node.nodeValue)
+    return originalText.get(node)
+  }
+
+  // What a conversion converts: a list of text nodes and their original
+  // text, read now. readText: every text node in the element (a pick
+  // converting the whole page). readChangedText: only the nodes the page
+  // changed or added since they were last converted - so a small change
+  // inside a large element (a clock, say) converts just that, not the whole
+  // element. Both take the nodes they read off the element's change list.
+  function readText (el) {
+    var entry = registry.get(el)
+    if (entry) entry.changed.clear()
+    var nodes = textNodes(el)
+    return { nodes: nodes, texts: nodes.map(originalOf) }
+  }
+
+  function readChangedText (el) {
+    var entry = registry.get(el)
+    if (!entry) return { nodes: [], texts: [] }
+    var nodes = Array.from(entry.changed).filter(function (node) {
+      return el.contains(node) && node.nodeValue.trim() !== ''
+    })
+    entry.changed.clear()
+    return { nodes: nodes, texts: nodes.map(originalOf) }
+  }
+
+  // Watches registered elements for text the PAGE changes or adds (the
+  // plugin's own writes are recognized via pluginWrote and ignored), and
+  // adds those nodes to the element's change list so they get converted too.
+  var onTextChanged = function () {}
+  var textWatcher = new MutationObserver(function (records) {
+    var changedElements = []
+    records.forEach(function (record) {
+      var nodes = []
+      if (record.type === 'characterData') {
+        var node = record.target
+        if (pluginWrote.has(node) && pluginWrote.get(node) === node.nodeValue) return
+        originalText.set(node, node.nodeValue)
+        pluginWrote.delete(node)
+        nodes.push(node)
+      } else {
+        Array.prototype.forEach.call(record.addedNodes, function (added) {
+          if (added.nodeType === 3) nodes.push(added)
+          else if (added.nodeType === 1) nodes = nodes.concat(textNodes(added))
+        })
+      }
+      nodes = nodes.filter(function (node) { return node.nodeValue.trim() !== '' })
+      if (!nodes.length) return
+      var el = record.target
+      while (el && !registry.has(el)) el = el.parentNode
+      if (!el) return
+      var entry = registry.get(el)
+      nodes.forEach(function (node) { entry.changed.add(node) })
+      if (changedElements.indexOf(el) === -1) changedElements.push(el)
+    })
+    changedElements.forEach(function (el) { onTextChanged(el) })
+  })
 
   // A host page's own CSS commonly keys font choices off a lang attribute
   // (e.g. sanskritdocuments.org's *[lang="sa"] { font-family: Shobhika }).
@@ -579,11 +742,13 @@ var Content = (function () {
   function register (el) {
     if (registry.has(el)) return
     registry.set(el, {
-      texts: captureTexts(el),
       appliedOutputClass: '',
       langs: captureLangs(el),
-      fontCarriers: captureFontCarriers(el)
+      fontCarriers: captureFontCarriers(el),
+      changed: new Set() // text nodes the page changed or added, not yet converted
     })
+    textNodes(el).forEach(originalOf) // record the original text of every node now
+    textWatcher.observe(el, { characterData: true, childList: true, subtree: true })
     elements.push(el)
   }
 
@@ -647,23 +812,33 @@ var Content = (function () {
     return { source: source, preOptions: preOptions }
   }
 
-  // Returns false (and leaves the element untouched) if `texts` isn't one
-  // converted string per original text node - writing anything else in
-  // would scramble the page, e.g. a raw string gets spread across the text
-  // nodes one character each.
-  function applyResult (el, texts, outputClass) {
-    var entry = registry.get(el)
-    var expected = entry ? entry.texts.length : captureTexts(el).length
-    if (!Array.isArray(texts) || texts.length !== expected) return false
-    var outputClassOld = entry ? entry.appliedOutputClass : ''
-    var walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null, false)
-    var node
-    var i = 0
-    while ((node = walker.nextNode())) {
-      if (node.nodeValue.trim() === '') continue
+  // Writes converted text into the nodes it was read from (see readText).
+  // Returns false (and writes nothing) if `texts` isn't one converted
+  // string per node read - writing anything else in would scramble the
+  // page, e.g. a raw string spread across the nodes one character each.
+  // A node the page removed, or changed again while this conversion was
+  // running, is skipped: its current text is newer than this result, and
+  // the change put it on the element's change list for its own conversion.
+  function writeText (el, read, texts) {
+    if (!Array.isArray(texts) || texts.length !== read.nodes.length) return false
+    read.nodes.forEach(function (node, i) {
+      if (!el.contains(node) || originalText.get(node) !== read.texts[i]) return
+      pluginWrote.set(node, texts[i])
       node.nodeValue = texts[i]
-      i += 1
-    }
+    })
+    return true
+  }
+
+  // The element's converted text as it is now - for working out its font
+  // class after converting just part of it (for a few scripts the font
+  // depends on marks in the text, e.g. Vedic accents).
+  function currentText (el) {
+    return JSON.stringify(textNodes(el).map(function (node) { return node.nodeValue }))
+  }
+
+  function setOutputClass (el, outputClass) {
+    var entry = registry.get(el)
+    var outputClassOld = entry ? entry.appliedOutputClass : ''
     if (outputClassOld && outputClassOld !== outputClass) el.classList.remove(outputClassOld)
     if (outputClass) el.classList.add(outputClass)
     if (entry) {
@@ -677,7 +852,6 @@ var Content = (function () {
         if (outputClass) carrier.classList.add(outputClass)
       })
     }
-    return true
   }
 
   return {
@@ -688,9 +862,13 @@ var Content = (function () {
     // added/removed (via the MutationObserver) while that operation is in
     // flight.
     snapshot: function () { return elements.slice() },
-    textsFor: function (el) { var entry = registry.get(el); return entry ? entry.texts : [] },
+    readText: readText,
+    readChangedText: readChangedText,
+    writeText: writeText,
+    currentText: currentText,
+    setOutputClass: setOutputClass,
+    onTextChanged: function (fn) { onTextChanged = fn },
     sourceForElement: sourceForElement,
-    applyResult: applyResult,
     parseConvertedTexts: parseConvertedTexts
   }
 })()
@@ -878,6 +1056,11 @@ var Panel = (function () {
     els.hideButton.addEventListener('click', function () { hide(); Storage.set(HIDDEN_KEY, 'true') })
     launcher.addEventListener('click', function () { show(); Storage.set(HIDDEN_KEY, 'false') })
     els.searchInput.addEventListener('focus', openFresh)
+    // Opening the picker is the sign a conversion is coming: start the
+    // engine now, so it has a few seconds' head start while they choose.
+    // (Not on the automatic open on a first visit - that's no such sign.)
+    launcher.addEventListener('click', Engine.startIfCached)
+    els.searchInput.addEventListener('focus', Engine.startIfCached)
     // Focus alone doesn't cover a click on the box while it already has
     // focus (e.g. after Escape), which should reopen the list too.
     els.searchInput.addEventListener('click', function () { if (els.listbox.hidden) openFresh() })
@@ -1449,7 +1632,8 @@ async function runConversion () {
   // jobs built here and the elements results get written back to must be
   // the SAME array, not two separate reads of Content's live list.
   var targetElements = Content.snapshot()
-  var jobs = targetElements.map(function (el) {
+  var reads = targetElements.map(Content.readText)
+  var jobs = targetElements.map(function (el, i) {
     var meta = Content.sourceForElement(el)
     return {
       source: meta.source,
@@ -1457,28 +1641,31 @@ async function runConversion () {
       preOptions: meta.preOptions,
       postOptions: State.postOptionsList,
       nativize: !State.preservePrevious,
-      text: JSON.stringify(Content.textsFor(el)),
+      text: JSON.stringify(reads[i].texts),
       onProgress: function (msg) { if (myToken === State.requestToken) Panel.setLoading(true, msg) }
     }
   })
 
   try {
     var results = target === 'Original'
-      ? targetElements.map(function (el) { return JSON.stringify(Content.textsFor(el)) })
+      ? reads.map(function (read) { return JSON.stringify(read.texts) })
       : await Engine.convertAll(jobs, { signal: controller.signal })
 
     if (myToken !== State.requestToken) return // superseded by a newer run
 
     var failed = 0
     results.forEach(function (raw, i) {
+      // Text the page changed while this was running is skipped by
+      // writeText and converted separately (see convertPending).
+      if (!Content.writeText(targetElements[i], reads[i], Content.parseConvertedTexts(raw))) {
+        failed += 1
+        console.error('Aksharamukha plugin: unexpected conversion result, left this element unchanged', raw)
+        return
+      }
       // getOutputClass's 3rd argument is content-dependent (e.g. Vedic
       // accent-mark detection), so it must be computed per element's own
       // result, not once for the whole batch.
-      var outputClass = target === 'Original' ? '' : getOutputClass(target, State.postOptionsList, raw)
-      if (!Content.applyResult(targetElements[i], Content.parseConvertedTexts(raw), outputClass)) {
-        failed += 1
-        console.error('Aksharamukha plugin: unexpected conversion result, left this element unchanged', raw)
-      }
+      Content.setOutputClass(targetElements[i], target === 'Original' ? '' : getOutputClass(target, State.postOptionsList, raw))
     })
     if (failed) Panel.setError('Part of this page could not be converted to this script.')
 
@@ -1494,29 +1681,82 @@ async function runConversion () {
   }
 }
 
-// Converts a single element that appeared on the page AFTER the last full
-// run (picked up by the MutationObserver) to whatever script is currently
-// selected, without disturbing the rest of the page or the request-token
-// bookkeeping used by runConversion's page-wide passes.
-async function convertNewElement (el) {
-  if (!State.targetOld || State.targetOld === 'Original') return
-  var meta = Content.sourceForElement(el)
-  var job = {
-    source: meta.source,
-    target: State.targetOld,
-    preOptions: meta.preOptions,
-    postOptions: State.postOptionsListOld,
-    nativize: !State.preservePrevious,
-    text: JSON.stringify(Content.textsFor(el))
-  }
-  try {
-    var results = await Engine.convertAll([job], {})
-    var outputClass = getOutputClass(State.targetOld, State.postOptionsListOld, results[0])
-    if (!Content.applyResult(el, Content.parseConvertedTexts(results[0]), outputClass)) {
-      console.error('Aksharamukha plugin: unexpected conversion result, left this element unchanged', results[0])
+// Text that appears or changes on the page after start-up is converted to
+// the currently selected script without disturbing the rest of the page:
+// an element the page adds is converted whole; when the page changes or
+// adds text inside a known element, only that text is converted (see
+// Content.readChangedText) - a clock ticking inside a large element costs a
+// few characters, not the element.
+//
+// Batched over a short delay, so a burst of changes (a page re-rendering
+// several parts at once) is one conversion call. And throttled: an element
+// that keeps changing is re-converted at most once per
+// RECONVERT_INTERVAL_MS, its changes in between collected into the next
+// conversion - a page updating something many times a second then costs at
+// most one conversion (on a first visit, one API call) a second.
+var RECONVERT_INTERVAL_MS = 1000
+var pendingItems = [] // { el, whole }
+var pendingTimer = null
+var nextAllowed = new WeakMap() // el -> earliest time its next re-conversion may start
+
+function queueForConversion (el, whole) {
+  var item = pendingItems.filter(function (p) { return p.el === el })[0]
+  if (item) item.whole = item.whole || !!whole
+  else pendingItems.push({ el: el, whole: !!whole })
+  schedulePending()
+}
+
+function schedulePending () {
+  if (pendingTimer || !pendingItems.length) return
+  var now = Date.now()
+  var soonest = Math.min.apply(null, pendingItems.map(function (p) { return (nextAllowed.get(p.el) || 0) - now }))
+  pendingTimer = setTimeout(convertPending, Math.max(100, soonest))
+}
+
+async function convertPending () {
+  pendingTimer = null
+  var now = Date.now()
+  var due = pendingItems.filter(function (p) { return (nextAllowed.get(p.el) || 0) <= now })
+  pendingItems = pendingItems.filter(function (p) { return due.indexOf(p) === -1 })
+  schedulePending() // for items still waiting out their interval
+
+  // "Original script": the page's own text is already what should show.
+  var target = State.target
+  if (!due.length || target === 'Original') return
+  var postOptions = State.postOptionsList
+  var items = due.map(function (p) {
+    return { el: p.el, whole: p.whole, read: p.whole ? Content.readText(p.el) : Content.readChangedText(p.el) }
+  }).filter(function (item) { return item.read.nodes.length })
+  if (!items.length) return
+  items.forEach(function (item) { nextAllowed.set(item.el, now + RECONVERT_INTERVAL_MS) })
+
+  var jobs = items.map(function (item) {
+    var meta = Content.sourceForElement(item.el)
+    return {
+      source: meta.source,
+      target: target,
+      preOptions: meta.preOptions,
+      postOptions: postOptions,
+      nativize: !State.preservePrevious,
+      text: JSON.stringify(item.read.texts)
     }
+  })
+  try {
+    var results = await Engine.convertAll(jobs, {})
+    // A newer pick is converting the whole page anyway.
+    if (State.target !== target) return
+    results.forEach(function (raw, i) {
+      var item = items[i]
+      if (!Content.writeText(item.el, item.read, Content.parseConvertedTexts(raw))) {
+        console.error('Aksharamukha plugin: unexpected conversion result, left this text unchanged', raw)
+        return
+      }
+      // After converting part of an element, its font class is worked out
+      // from all of its (now converted) text, not just the part converted.
+      Content.setOutputClass(item.el, getOutputClass(target, postOptions, item.whole ? raw : Content.currentText(item.el)))
+    })
   } catch (e) {
-    console.error('Aksharamukha plugin: failed to convert a dynamically added element', e)
+    console.error('Aksharamukha plugin: failed to convert new or changed text on the page', e)
   }
 }
 
@@ -1545,17 +1785,18 @@ function init () {
   // anything added after this initial scan) get converted to whatever
   // script is currently selected as soon as they show up, instead of
   // silently being invisible to a one-time page scan.
-  Content.observe(convertNewElement)
+  Content.observe(function (el) { queueForConversion(el, true) })
+  Content.onTextChanged(function (el) { queueForConversion(el, false) })
+  // A saved script converts right away - through the engine if its files
+  // are saved from an earlier page view (starting it for that), otherwise
+  // the API.
   if (restoredTarget) runConversion()
-  // Start the engine in the background once the page is idle, so it's
-  // ready for this page's later conversions and - on a first visit -
-  // downloaded and cached for the next page view, which can then convert
-  // without the API at all (see Engine's shouldUseWasm). It runs in a
-  // worker, so it doesn't block the page, and it stays silent: whatever
-  // the visitor asked for is already shown by the conversion's own
-  // loading state. A no-op with engine=api.
+  // Once the page is idle: on a visitor's first page view, download the
+  // engine files for later page views, without starting the engine (see
+  // Engine.prepare). Readers who never convert then pay nothing on later
+  // page views. A no-op with engine=api.
   var scheduleIdle = window.requestIdleCallback || function (fn) { setTimeout(fn, 1500) }
-  scheduleIdle(function () { Engine.warmUp() })
+  scheduleIdle(function () { Engine.prepare() })
 }
 
 if (document.readyState === 'loading') {

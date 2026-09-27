@@ -6,10 +6,10 @@ launcher appears letting visitors pick a target script.
 
 ```html
 <div class="aksharamukha-text">आपका पाठ यहाँ जाएगा</div>
-<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@v5.0.15/aksharamukha-v5.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@v5.0.16/aksharamukha-v5.js"></script>
 ```
 
-That `@v5.0.15` matters - see "Releasing a new version" below for why real
+That `@v5.0.16` matters - see "Releasing a new version" below for why real
 embeds should always pin a tag like this instead of tracking `master`.
 
 `aksharamukha-v5.js` is the current version. `aksharamukha-v2.js`/`v3.js`/`v4.js`
@@ -73,7 +73,7 @@ script starts with the badge instead.
 
 ### `engine`
 
-- **`auto`** (default) - runs the actual transliteration engine client-side via WASM (Pyodide + the real `aksharamukha` Python package), in a Web Worker so its start-up and conversions never freeze the page. The engine starts in the background once the page is idle; on a visitor's first page view on a site it's downloaded (~9MB compressed) and saved in the browser's Cache Storage for that site. Routing:
+- **`auto`** (default) - runs the actual transliteration engine client-side via WASM (Pyodide + the real `aksharamukha` Python package), in a Web Worker so its start-up and conversions never freeze the page. On a visitor's first page view on a site, its files (~9MB compressed) are downloaded in the background and saved in the browser's Cache Storage for that site - **without starting the engine**. Starting it (seconds of CPU, ~160MB of memory) only happens when a conversion needs it: a page with a saved script, a very large page, or the visitor clicking the badge or into the search box (which gives it a head start while they choose). A reader who never converts pays nothing on later page views. Routing:
   - The engine is used whenever that costs no download: it's already running, or its files were saved by an earlier page view (so a returning visitor's pages convert with no API calls at all).
   - Very large text (over ~300KB) always uses the engine, where it's faster than the API.
   - Otherwise - a visitor's very first page view, before the engine has finished downloading - the hosted API is used.
@@ -84,10 +84,10 @@ script starts with the badge instead.
 
 ```html
 <!-- lightweight: always uses the hosted API, no WASM download -->
-<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@v5.0.15/aksharamukha-v5.js?engine=api"></script>
+<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@v5.0.16/aksharamukha-v5.js?engine=api"></script>
 
 <!-- panel in the bottom-left, offset for a page with a tall fixed footer -->
-<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@v5.0.15/aksharamukha-v5.js?position=bottom-left&offset=60"></script>
+<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@v5.0.16/aksharamukha-v5.js?position=bottom-left&offset=60"></script>
 ```
 
 ## Theming
@@ -148,7 +148,7 @@ element instead of (or in addition to) the script-tag-wide `source`/
 <div class="verse inputscript-Telugu">మహాశ్రమణ</div>
 <div class="verse inputscript-Malayalam">കുസുമിതോ ലക്ഷണൈഃ</div>
 <div class="verse inputscript-Tamil preoptions-TamilTranscribe">ஆதீஸ்வர் ஸ்ரீவிருஷபநாதர்</div>
-<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@v5.0.15/aksharamukha-v5.js?class=verse"></script>
+<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@v5.0.16/aksharamukha-v5.js?class=verse"></script>
 ```
 
 Elements added to the page later (SPA route changes, AJAX-loaded content,
@@ -333,7 +333,7 @@ pre-compression). **Real embeds - anything you'd actually tell someone to
 paste into their site - must pin a tag, not track `master`:**
 
 ```html
-<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@v5.0.15/aksharamukha-v5.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@v5.0.16/aksharamukha-v5.js"></script>
 ```
 
 jsDelivr treats a tag-pinned path as immutable and caches it long-term,

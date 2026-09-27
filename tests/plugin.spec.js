@@ -9,6 +9,9 @@ const { selectScript, openOptions } = require('./helpers')
 // running the suite twice against a server that kept state some other way).
 const DEMO = '/demo-v5-api.html'
 
+// How many engine files the build lists (everything in wasm/pyodide and wasm/wheel).
+const ENGINE_FILE_COUNT = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '..', 'aksharamukha-v5.js'), 'utf8').match(/^var ENGINE_FILES = (.*)$/m)[1]).length
+
 test('fresh visit opens the panel; converts on selection', async ({ page }) => {
   await page.goto(DEMO)
   await expect(page.locator('#aksharamukha-navbar')).toBeVisible()
@@ -395,6 +398,120 @@ test('with a mouse, there are no "i" buttons and hovering an option shows its ex
   await expect(chip.locator('.aksharamukha-tooltip')).toBeVisible()
 })
 
+test.describe('when the page changes its own text', () => {
+  // Regression: the plugin read each element's text once, at start-up, so
+  // text the page changed later was overwritten with the OLD text,
+  // converted, on the next pick.
+  const setup = async page => {
+    await page.goto(DEMO)
+    await page.setContent(`
+      <!DOCTYPE html><html><head><meta charset="utf-8"/></head><body>
+      <p class="aksharamukha-text" id="p">नमस्ते</p>
+      <p class="aksharamukha-text" id="q">गुरु <b>देव</b></p>
+      <script src="/aksharamukha-v5.js?engine=api&source=Devanagari"></script></body></html>
+    `, { waitUntil: 'load' })
+  }
+  const setText = (page, id, text) => page.evaluate(([id, text]) => { document.getElementById(id).firstChild.nodeValue = text }, [id, text])
+
+  test('text changed before a pick is what gets converted', async ({ page }) => {
+    await setup(page)
+    await setText(page, 'p', 'राम')
+    await selectScript(page, 'Tamil')
+    await expect(page.locator('#p')).toHaveText('ராம', { timeout: 15000 })
+  })
+
+  test('text changed or replaced while a script is showing is converted too, and Original shows the latest text', async ({ page }) => {
+    await setup(page)
+    await selectScript(page, 'Tamil')
+    await expect(page.locator('#p')).toHaveText('நமஸ்தே', { timeout: 15000 })
+
+    await setText(page, 'p', 'शिव')
+    await expect(page.locator('#p')).toHaveText('ஶிவ', { timeout: 15000 })
+    await page.evaluate(() => { document.getElementById('q').innerHTML = 'कृष्ण <i>गोविन्द</i>' })
+    await expect(page.locator('#q')).toHaveText('க்ருʼஷ்ண கோ³விந்த³', { timeout: 15000 })
+
+    await selectScript(page, 'Original script')
+    await expect(page.locator('#p')).toHaveText('शिव')
+    await expect(page.locator('#q')).toHaveText('कृष्ण गोविन्द')
+  })
+
+  test('text changed while a conversion is in progress isn\'t overwritten by that conversion\'s outdated result', async ({ page }) => {
+    await setup(page)
+    // Hold the API response until the page has changed its text.
+    let release
+    const held = new Promise(resolve => { release = resolve })
+    await page.route('https://aksharamukha-plugin.appspot.com/api/plugin', async route => {
+      const text = JSON.parse(route.request().postDataJSON().text)
+      if (text.includes('नमस्ते')) await held
+      route.continue()
+    })
+    await selectScript(page, 'Tamil')
+    await setText(page, 'p', 'गणेश')
+    release()
+    await expect(page.locator('#p')).toHaveText('க³ணேஶ', { timeout: 15000 })
+    await page.waitForTimeout(1000) // the held, outdated result must not land afterwards
+    await expect(page.locator('#p')).toHaveText('க³ணேஶ')
+  })
+
+  const setupClock = async page => {
+    await page.goto(DEMO)
+    const big = 'नमस्ते, अक्षरमुखा एक लिपि परिवर्तन उपकरण है। '.repeat(2000) // ~140KB
+    await page.setContent(`
+      <!DOCTYPE html><html><head><meta charset="utf-8"/></head><body>
+      <div class="aksharamukha-text"><p id="big">${big}</p><p>समय: <span id="clock">०</span></p></div>
+      <script src="/aksharamukha-v5.js?engine=api&source=Devanagari"></script></body></html>
+    `, { waitUntil: 'load' })
+  }
+  // The page updates its clock 10 times a second for 3 seconds, ending on "30".
+  const tickClock = page => page.evaluate(() => new Promise(done => {
+    const digits = '०१२३४५६७८९'
+    let n = 0
+    const timer = setInterval(() => {
+      n++
+      document.getElementById('clock').firstChild.nodeValue = digits[Math.floor(n / 10) % 10] + digits[n % 10]
+      if (n === 30) { clearInterval(timer); done() }
+    }, 100)
+  }))
+
+  test('a small change inside a large element converts only that text, at most once a second', async ({ page }) => {
+    // Regression: any change re-converted the whole element, so a clock
+    // ticking inside a page-sized element re-sent the whole page each tick.
+    await setupClock(page)
+    await selectScript(page, 'Tamil')
+    await expect(page.locator('#clock')).toHaveText('0', { timeout: 30000 })
+
+    const requests = []
+    page.on('request', r => { if (r.url().includes('api/plugin')) requests.push(r.postDataJSON().text) })
+    await tickClock(page)
+    await expect(page.locator('#clock')).toHaveText('30', { timeout: 15000 })
+    expect(requests.length).toBeGreaterThan(0)
+    expect(requests.length).toBeLessThanOrEqual(5) // 30 changes, throttled to about one a second
+    for (const text of requests) expect(JSON.parse(text)).toEqual([expect.stringMatching(/^[०-९]{2}$/)])
+    await expect(page.locator('#big')).toContainText('நமஸ்தே')
+  })
+
+  test('switching script while the page keeps changing leaves nothing in the old script', async ({ page }) => {
+    await setupClock(page)
+    await selectScript(page, 'Tamil')
+    await expect(page.locator('#clock')).toHaveText('0', { timeout: 30000 })
+    const ticking = tickClock(page)
+    await selectScript(page, 'Telugu')
+    await ticking
+    await expect(page.locator('#big')).toContainText('నమస్తే', { timeout: 30000 })
+    await expect(page.locator('.aksharamukha-text')).not.toContainText('நமஸ்தே', { timeout: 15000 })
+    await expect(page.locator('.aksharamukha-text')).not.toContainText('ஸமய')
+  })
+})
+
+test('the bundle contains only the script data the plugin uses', async () => {
+  // The website's full catalog (descriptions, font info, OCR lists...) is
+  // ~110KB the plugin never reads.
+  const bundle = require('fs').readFileSync(require('path').join(__dirname, '..', 'aksharamukha-v5.js'), 'utf8')
+  expect(bundle).not.toContain('ssdesc')
+  expect(bundle).not.toContain('ocrLangOptions')
+  expect(Buffer.byteLength(bundle)).toBeLessThan(170 * 1024)
+})
+
 test('a post-option checkbox toggles and changes the converted output', async ({ page }) => {
   await page.goto(DEMO)
   await selectScript(page, 'Tamil')
@@ -510,31 +627,6 @@ test('engine=auto routes small text to the API, not a WASM boot', async ({ page 
   expect(apiRequests.length).toBeGreaterThan(0)
 })
 
-test('engine=auto routes large text to WASM, not the API', async ({ page }) => {
-  const apiRequests = []
-  await page.route('https://aksharamukha-plugin.appspot.com/api/plugin', route => {
-    apiRequests.push(route.request())
-    route.continue()
-  })
-  // The large text has to be on the page before the plugin loads - it
-  // captures each element's text once, at start-up.
-  await page.goto(DEMO)
-  const sentence = 'नमस्ते, अक्षरमुखा एक लिपि परिवर्तन उपकरण है। '
-  let text = ''
-  while (Buffer.byteLength(text) < 320 * 1024) text += sentence
-  await page.setContent(`
-    <!DOCTYPE html><html><head><meta charset="utf-8"/></head><body>
-    <p class="aksharamukha-text">${text}</p>
-    <script src="/aksharamukha-v5.js?source=Devanagari"></script></body></html>
-  `, { waitUntil: 'load' })
-  await selectScript(page, 'Tamil')
-  await expect(page.locator('.aksharamukha-text').first()).toContainText('நமஸ்தே', { timeout: 30000 })
-  expect(apiRequests.length).toBe(0)
-  // The engine runs in a Web Worker: Pyodide never loads on the page's
-  // own main thread, where its start-up froze the page for seconds.
-  expect(await page.evaluate(() => typeof window.loadPyodide)).toBe('undefined')
-})
-
 test('elements sharing the same settings convert with one API request per page, not one per element', async ({ page }) => {
   const apiRequests = []
   await page.route('https://aksharamukha-plugin.appspot.com/api/plugin', route => {
@@ -558,27 +650,6 @@ test('elements sharing the same settings convert with one API request per page, 
   await expect(paras.nth(1).locator('b')).toHaveText('க்ருʼஷ்ண')
   await expect(paras.nth(2)).toHaveText('ஶிவ')
   expect(apiRequests.length).toBe(1)
-})
-
-test('a returning visitor whose engine files are already cached converts without the API', async ({ page }) => {
-  // Also covers the first-visit path: the page converts via the API while
-  // the engine downloads into Cache Storage in the background.
-  const apiRequests = []
-  await page.route('https://aksharamukha-plugin.appspot.com/api/plugin', route => {
-    apiRequests.push(route.request())
-    route.continue()
-  })
-  await page.goto('/demo-v5.html')
-  await expect.poll(() => page.evaluate(async () => {
-    const keys = await (await caches.open('aksharamukha-wasm-v1')).keys()
-    return keys.some(r => r.url.includes('/wheel/'))
-  }), { timeout: 60000 }).toBe(true)
-
-  await page.evaluate(() => localStorage.setItem('target', 'Tamil'))
-  apiRequests.length = 0
-  await page.reload()
-  await expect(page.locator('.aksharamukha-text').first()).toContainText('நமஸ்தே', { timeout: 30000 })
-  expect(apiRequests.length).toBe(0)
 })
 
 test('output font class beats a lang-keyed host rule and a <pre> UA default', async ({ page }) => {
@@ -619,44 +690,26 @@ test('output font class beats a lang-keyed host rule and a <pre> UA default', as
   await expect(page.locator('h2')).toHaveAttribute('lang', 'sa')
 })
 
-test('after a small conversion goes via the API, WASM still warms up in the background for later picks', async ({ page }) => {
-  // Regression: engine=auto's size-based routing means a small-text page's
-  // conversions all go via the API and never call initWasm() on their own
-  // - warmUp() used to only be scheduled when NO target had been restored
-  // yet, on the (now-false) assumption that a real conversion always
-  // triggers the same warm-up as a side effect. Without an unconditional
-  // background warm-up, a visitor would keep paying a network round-trip
-  // per conversion for the whole session even once WASM would have been
-  // free. This confirms: first pick goes via the API (no wait), and a
-  // later pick - once the background boot has had time to finish - uses
-  // WASM automatically, with no further API calls.
-  // Headless Chromium's requestIdleCallback can fire almost immediately,
-  // which would race the background warm-up against this test's own first
-  // selectScript() call and make even the FIRST pick use WASM - delaying
-  // it a few seconds keeps the two deterministically ordered without
-  // disabling the warm-up outright (unlike the size-routing test above,
-  // which isn't trying to observe it happening at all).
-  await page.addInitScript(() => {
-    window.requestIdleCallback = function (fn) { setTimeout(fn, 3000) }
-  })
-  const apiRequests = []
-  await page.route('https://aksharamukha-plugin.appspot.com/api/plugin', route => {
-    apiRequests.push(route.request())
-    route.continue()
-  })
+test('a first visit downloads the engine files without starting the engine; later page views do nothing in the background', async ({ page }) => {
+  // Starting the engine costs seconds of processing and ~90MB of memory,
+  // so readers who never convert shouldn't pay it on every page view. The
+  // files are still downloaded once, so later conversions don't need the
+  // API.
+  let workers = 0
+  let engineRequests = 0
+  page.on('worker', () => workers++)
+  page.on('request', r => { if (r.url().includes('/wasm/')) engineRequests++ })
+  const savedFiles = () => page.evaluate(async () => (await (await caches.open('aksharamukha-wasm-v1')).keys()).length)
   await page.goto('/demo-v5.html')
-  await selectScript(page, 'Tamil')
-  await expect(page.locator('.aksharamukha-text').first()).toContainText('நமஸ்தே', { timeout: 15000 })
-  expect(apiRequests.length).toBeGreaterThan(0)
+  await expect.poll(savedFiles, { timeout: 60000 }).toBe(ENGINE_FILE_COUNT)
+  expect(workers).toBe(0)
 
-  // Generous margin over the ~4-9s cold boots measured elsewhere in this
-  // suite, so this isn't flaky on a slower CI runner.
-  await page.waitForTimeout(15000)
-  apiRequests.length = 0
-
-  await selectScript(page, 'Telugu')
-  await expect(page.locator('.aksharamukha-text').first()).toContainText('నమస్తే', { timeout: 15000 })
-  expect(apiRequests.length).toBe(0)
+  workers = 0
+  engineRequests = 0
+  await page.reload()
+  await page.waitForTimeout(3000)
+  expect(workers).toBe(0)
+  expect(engineRequests).toBe(0)
 })
 
 test('?offset=0 is honored, not silently replaced by the default', async ({ page }) => {
@@ -673,3 +726,145 @@ test('?offset=0 is honored, not silently replaced by the default', async ({ page
   const top = await page.locator('#aksharamukha-navbar').evaluate(el => getComputedStyle(el).top)
   expect(top).toBe('0px')
 })
+
+// Each of these starts the engine (seconds of CPU each); run one at a time
+// so they don't compete for the CPU with each other - the rest still run in
+// parallel.
+test.describe('engine start-up', () => {
+  test.describe.configure({ mode: 'serial' })
+  // Engine start-up is CPU-bound, so these slow down a lot on a busy machine.
+  test.setTimeout(240000)
+
+  test('engine=auto routes large text to WASM, not the API', async ({ page }) => {
+    const apiRequests = []
+    await page.route('https://aksharamukha-plugin.appspot.com/api/plugin', route => {
+      apiRequests.push(route.request())
+      route.continue()
+    })
+    // The large text has to be on the page before the plugin loads - it
+    // captures each element's text once, at start-up.
+    await page.goto(DEMO)
+    const sentence = 'नमस्ते, अक्षरमुखा एक लिपि परिवर्तन उपकरण है। '
+    let text = ''
+    while (Buffer.byteLength(text) < 320 * 1024) text += sentence
+    await page.setContent(`
+      <!DOCTYPE html><html><head><meta charset="utf-8"/></head><body>
+      <p class="aksharamukha-text">${text}</p>
+      <script src="/aksharamukha-v5.js?source=Devanagari"></script></body></html>
+    `, { waitUntil: 'load' })
+    await selectScript(page, 'Tamil')
+    await expect(page.locator('.aksharamukha-text').first()).toContainText('நமஸ்தே', { timeout: 120000 })
+    expect(apiRequests.length).toBe(0)
+    // The engine runs in a Web Worker: Pyodide never loads on the page's
+    // own main thread, where its start-up froze the page for seconds.
+    expect(await page.evaluate(() => typeof window.loadPyodide)).toBe('undefined')
+  })
+
+  test('a returning visitor whose engine files are already cached converts without the API', async ({ page }) => {
+    // Also covers the first-visit path: the page converts via the API while
+    // the engine downloads into Cache Storage in the background.
+    const apiRequests = []
+    await page.route('https://aksharamukha-plugin.appspot.com/api/plugin', route => {
+      apiRequests.push(route.request())
+      route.continue()
+    })
+    await page.goto('/demo-v5.html')
+    await expect.poll(() => page.evaluate(async () => (await (await caches.open('aksharamukha-wasm-v1')).keys()).length), { timeout: 120000 }).toBe(ENGINE_FILE_COUNT)
+
+    await page.evaluate(() => localStorage.setItem('target', 'Tamil'))
+    apiRequests.length = 0
+    await page.reload()
+    await expect(page.locator('.aksharamukha-text').first()).toContainText('நமஸ்தே', { timeout: 120000 })
+    expect(apiRequests.length).toBe(0)
+  })
+
+  test('clicking into the search box starts the engine, and a pick then converts without the API or re-downloading', async ({ page }) => {
+    const apiRequests = []
+    await page.route('https://aksharamukha-plugin.appspot.com/api/plugin', route => {
+      apiRequests.push(route.request())
+      route.continue()
+    })
+    let workers = 0
+    page.on('worker', () => workers++)
+    await page.goto('/demo-v5.html')
+    await expect.poll(() => page.evaluate(async () => (await (await caches.open('aksharamukha-wasm-v1')).keys()).length), { timeout: 120000 }).toBe(ENGINE_FILE_COUNT)
+
+    await page.reload()
+    const engineRequests = []
+    page.on('request', r => { if (r.url().includes('/wasm/')) engineRequests.push(r.url().split('/wasm/')[1]) })
+    await page.waitForTimeout(1500)
+    expect(workers).toBe(0) // the panel opening by itself doesn't start it
+    await page.click('#aksharamukha-select-input')
+    await expect.poll(() => workers).toBe(1)
+    await page.fill('#aksharamukha-select-input', 'Tamil')
+    await page.keyboard.press('Enter')
+    await expect(page.locator('.aksharamukha-text').first()).toContainText('நமஸ்தே', { timeout: 120000 })
+    expect(apiRequests.length).toBe(0)
+    // Everything comes from the saved files, except the two scripts the
+    // engine loads with importScripts, which go through the browser's HTTP
+    // cache instead.
+    expect(engineRequests.filter(f => !/^pyodide\/pyodide(\.asm)?\.js$/.test(f))).toEqual([])
+  })
+
+  test('on a first visit, picks use the API while the engine downloads; once it has, picks use the engine', async ({ page }) => {
+    // Headless Chromium's requestIdleCallback can fire almost immediately;
+    // delaying it keeps the first pick ahead of the background download.
+    await page.addInitScript(() => {
+      window.requestIdleCallback = function (fn) { setTimeout(fn, 3000) }
+    })
+    const apiRequests = []
+    await page.route('https://aksharamukha-plugin.appspot.com/api/plugin', route => {
+      apiRequests.push(route.request())
+      route.continue()
+    })
+    await page.goto('/demo-v5.html')
+    await selectScript(page, 'Tamil')
+    await expect(page.locator('.aksharamukha-text').first()).toContainText('நமஸ்தே', { timeout: 15000 })
+    expect(apiRequests.length).toBeGreaterThan(0)
+
+    await expect.poll(() => page.evaluate(async () => (await (await caches.open('aksharamukha-wasm-v1')).keys()).length), { timeout: 120000 }).toBe(ENGINE_FILE_COUNT)
+    apiRequests.length = 0
+    await selectScript(page, 'Telugu')
+    await expect(page.locator('.aksharamukha-text').first()).toContainText('నమస్తే', { timeout: 120000 })
+    expect(apiRequests.length).toBe(0)
+  })
+
+  test('quick picks on a large page: conversions superseded before the engine starts on them are dropped', async ({ page }) => {
+    // Regression: the engine converted every pick in turn, so the last one
+    // waited for all the ones before it.
+    await page.addInitScript(() => {
+      window.__sentToEngine = []
+      const RealWorker = window.Worker
+      window.Worker = function (url, options) {
+        const worker = new RealWorker(url, options)
+        const post = worker.postMessage.bind(worker)
+        worker.postMessage = message => {
+          if (message && message.type === 'convert') window.__sentToEngine.push(message.target)
+          return post(message)
+        }
+        return worker
+      }
+    })
+    await page.goto(DEMO)
+    const sentence = 'नमस्ते, अक्षरमुखा एक लिपि परिवर्तन उपकरण है। '
+    let text = ''
+    while (Buffer.byteLength(text) < 320 * 1024) text += sentence
+    await page.setContent(`
+      <!DOCTYPE html><html><head><meta charset="utf-8"/></head><body>
+      <p class="aksharamukha-text">${text}</p>
+      <script src="/aksharamukha-v5.js?source=Devanagari"></script></body></html>
+    `, { waitUntil: 'load' })
+    const para = page.locator('.aksharamukha-text')
+    await selectScript(page, 'Tamil')
+    await expect(para).toContainText('நமஸ்தே', { timeout: 120000 })
+
+    await page.evaluate(() => { window.__sentToEngine = [] })
+    for (const label of ['Telugu', 'Kannada', 'Bengali', 'Malayalam']) await selectScript(page, label)
+    await expect(para).toContainText('നമസ്തേ', { timeout: 120000 })
+    const sent = await page.evaluate(() => window.__sentToEngine)
+    expect(sent[sent.length - 1]).toBe('Malayalam')
+    expect(sent).not.toContain('Kannada')
+    expect(sent).not.toContain('Bengali')
+  })
+})
+

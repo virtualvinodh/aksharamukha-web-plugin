@@ -178,6 +178,31 @@ function engineWheel (pluginSrc) {
   return wheels[0]
 }
 
+// script-data.generated.js is the website's whole script catalog, most of
+// which the plugin never reads (script descriptions, font info, OCR
+// languages, ...: ~110KB of a ~256KB bundle). The bundle keeps only the
+// ScriptData sections src/v5-plugin.js actually references - found by
+// scanning it for `ScriptData.<name>`, so a newly used section is picked up
+// automatically - and, for the lists of scripts, only the fields it reads.
+const SCRIPT_FIELDS = ['value', 'label', 'region']
+
+function trimmedScriptData (dataSrc, pluginSrc) {
+  const mod = new Function(dataSrc + '\nreturn { ScriptData: ScriptData, getOutputClass: getOutputClass }')()
+  const used = [...new Set((pluginSrc.match(/ScriptData\.\w+/g) || []).map(s => s.slice('ScriptData.'.length)))].sort()
+  const isScriptList = v => Array.isArray(v) && v.length > 0 && v.every(o => o && typeof o === 'object' && 'value' in o && 'label' in o)
+  const trimmed = {}
+  for (const key of used) {
+    if (!(key in mod.ScriptData)) {
+      throw new Error('src/v5-plugin.js reads ScriptData.' + key + ', which script-data.generated.js doesn\'t have.')
+    }
+    const value = mod.ScriptData[key]
+    trimmed[key] = isScriptList(value)
+      ? value.map(o => Object.fromEntries(SCRIPT_FIELDS.filter(f => f in o).map(f => [f, o[f]])))
+      : value
+  }
+  return 'const ScriptData = ' + JSON.stringify(trimmed) + '\n\n' + mod.getOutputClass.toString() + '\n'
+}
+
 // The commit that last changed wasm/. It's baked into the bundle as
 // ENGINE_COMMIT: on jsDelivr the plugin loads the engine from that commit
 // instead of from next to itself, so a plugin release that doesn't touch
@@ -244,11 +269,15 @@ function main () {
   // .br wouldn't decompress to the committed .js (CI checks they match).
   const engine = engineCommit()
   const wheel = engineWheel(pluginSrc)
+  const files = ENGINE_FOLDERS.flatMap(folder =>
+    listFiles(path.join(WASM_DIR, folder)).filter(f => !f.endsWith('.br')).map(f => folder + '/' + f)).sort()
   const out = (banner + '(function () {\n"use strict";\n' +
-    '// Set by the build: the commit that last changed wasm/, and the aksharamukha wheel in it.\n' +
+    '// Set by the build: the commit that last changed wasm/, the aksharamukha wheel in it,\n' +
+    '// and every engine file (downloaded ahead of time on a first visit).\n' +
     'var ENGINE_COMMIT = ' + JSON.stringify(engine) + '\n' +
     'var ENGINE_WHEEL = ' + JSON.stringify(wheel) + '\n' +
-    dataSrc + '\n' + pluginSrc + '\n})();\n').replace(/\r\n/g, '\n')
+    'var ENGINE_FILES = ' + JSON.stringify(files) + '\n' +
+    trimmedScriptData(dataSrc, pluginSrc) + '\n' + pluginSrc + '\n})();\n').replace(/\r\n/g, '\n')
 
   fs.writeFileSync(OUT_FILE, out, 'utf8')
   console.log('Wrote ' + path.relative(process.cwd(), OUT_FILE) + ' (' + (out.length / 1024).toFixed(1) + ' KB; engine from commit ' + engine.slice(0, 7) + ')')
