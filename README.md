@@ -6,10 +6,10 @@ launcher appears letting visitors pick a target script.
 
 ```html
 <div class="aksharamukha-text">आपका पाठ यहाँ जाएगा</div>
-<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@v5.0.17/aksharamukha-v5.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@v5.0.18/aksharamukha-v5.js"></script>
 ```
 
-That `@v5.0.17` matters - see "Releasing a new version" below for why real
+That `@v5.0.18` matters - see "Releasing a new version" below for why real
 embeds should always pin a tag like this instead of tracking `master`.
 
 `aksharamukha-v5.js` is the current version. `aksharamukha-v2.js`/`v3.js`/`v4.js`
@@ -82,11 +82,38 @@ script starts with the badge instead.
 
 ```html
 <!-- lightweight: always uses the hosted API, no WASM download -->
-<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@v5.0.17/aksharamukha-v5.js?engine=api"></script>
+<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@v5.0.18/aksharamukha-v5.js?engine=api"></script>
 
 <!-- panel in the bottom-left, offset for a page with a tall fixed footer -->
-<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@v5.0.17/aksharamukha-v5.js?position=bottom-left&offset=60"></script>
+<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@v5.0.18/aksharamukha-v5.js?position=bottom-left&offset=60"></script>
 ```
+
+### Sites with a Content-Security-Policy
+
+Most sites don't send one and need nothing here. A site that does must
+allow the following, in addition to its own sources:
+
+| Directive | Add | Needed for |
+|---|---|---|
+| `script-src` | `https://cdn.jsdelivr.net 'wasm-unsafe-eval'` | the plugin and the engine's code; compiling the engine (WebAssembly) |
+| `worker-src` | `blob:` | the engine's background worker (if you don't set `worker-src`, add `blob:` to `script-src` instead) |
+| `connect-src` | `https://cdn.jsdelivr.net https://aksharamukha-plugin.appspot.com` | downloading the engine files; the hosted API |
+| `style-src` | `'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com` | the panel's styles; the script fonts' stylesheets |
+| `font-src` | `https://cdn.jsdelivr.net https://fonts.gstatic.com` | the script fonts |
+| `img-src` | `https://cdn.jsdelivr.net` | the launcher icon |
+
+- If your policy allows scripts and styles by nonce instead of
+  `'unsafe-inline'`, put the nonce on the plugin's tag
+  (`<script nonce="…" src="…aksharamukha-v5.js">`) - the panel's styles
+  reuse it, so `style-src` then needs no `'unsafe-inline'`.
+- If the engine is blocked (no `'wasm-unsafe-eval'` or no `blob:`
+  worker), the plugin quietly uses the hosted API for every conversion
+  instead - it keeps working, just with a network call per page. So with
+  `engine=api` you can leave out `'wasm-unsafe-eval'`, `blob:` and
+  jsDelivr in `connect-src`.
+- Self-hosted copies: replace `https://cdn.jsdelivr.net` with wherever you
+  serve the plugin and its `wasm/` folder (the fonts still come from
+  jsDelivr and Google Fonts).
 
 ## Theming
 
@@ -146,7 +173,7 @@ element instead of (or in addition to) the script-tag-wide `source`/
 <div class="verse inputscript-Telugu">మహాశ్రమణ</div>
 <div class="verse inputscript-Malayalam">കുസുമിതോ ലക്ഷണൈഃ</div>
 <div class="verse inputscript-Tamil preoptions-TamilTranscribe">ஆதீஸ்வர் ஸ்ரீவிருஷபநாதர்</div>
-<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@v5.0.17/aksharamukha-v5.js?class=verse"></script>
+<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@v5.0.18/aksharamukha-v5.js?class=verse"></script>
 ```
 
 Elements added to the page later (SPA route changes, AJAX-loaded content,
@@ -164,12 +191,20 @@ currently selected - no rescan or re-init needed.
 
 ## Tests
 
-`npm install && npm test` runs the Playwright suite in `tests/` against
+`npm install && npm test` runs the Playwright suite in `tests/` in
+Chromium, Firefox and WebKit (Safari's engine) - install them once with
+`npx playwright install chromium firefox webkit`. Most tests use
 `demo-v5-api.html` (`engine=api` - no WASM cold start, keeps the suite
-fast; the committed `wasm/` isn't exercised by these tests). It spins up
-its own static file server (`tests/static-server.js`) automatically, the
-same way `python -m http.server` does for manual testing, so no separate
-setup is needed - just `npm test`.
+fast); the engine tests (download, Cache Storage, start-up, the fallback
+to the API) load the committed `wasm/`. It spins up its own static file
+server (`tests/static-server.js`) automatically, the same way
+`python -m http.server` does for manual testing, so no separate setup is
+needed - just `npm test`. Add `--project=chromium` (or `firefox`,
+`webkit`) to run a single browser.
+
+Playwright's WebKit build for Windows can't keep Cache Storage between
+page loads (unlike Safari itself), so the few tests that need saved
+engine files are skipped there; they run in WebKit on Linux in CI.
 
 These are integration tests, not isolated unit tests: they hit the live
 hosted API (`aksharamukha-plugin.appspot.com`) for every conversion, so a
@@ -331,7 +366,7 @@ pre-compression). **Real embeds - anything you'd actually tell someone to
 paste into their site - must pin a tag, not track `master`:**
 
 ```html
-<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@v5.0.17/aksharamukha-v5.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@v5.0.18/aksharamukha-v5.js"></script>
 ```
 
 jsDelivr treats a tag-pinned path as immutable and caches it long-term,

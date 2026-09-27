@@ -191,6 +191,10 @@ var Config = (function () {
     // fonts.css and icon.png are loaded from next to this script, so on the
     // CDN they're pinned to the same version as the script itself.
     assetBase: new URL('./', scriptURL),
+    // A site whose Content-Security-Policy allows styles by nonce (not
+    // 'unsafe-inline') gives the plugin's <script> tag that nonce; the
+    // panel's <style> reuses it.
+    nonce: scriptEl.nonce || scriptEl.getAttribute('nonce') || '',
     wasmBase: params.get('wasmbase')
       ? new URL(params.get('wasmbase'), document.baseURI)
       : defaultWasmBase(scriptURL),
@@ -624,9 +628,27 @@ var Engine = (function () {
       }).then(function () {
         filesCachedCheck = Promise.resolve(true)
         dropOtherEngineCopies()
+        Storage.set(DOWNLOADED_KEY, String(Date.now()))
+      }, function (err) {
+        Storage.set(DOWNLOADED_KEY, String(Date.now()))
+        throw err
       })
     }
     return downloading
+  }
+
+  // When this browser last finished (or failed) downloading the engine
+  // files. If they're missing again on a later page view within a day, the
+  // browser isn't keeping them - writes failing, storage full, or storage
+  // that doesn't last between page views (some private-browsing modes) -
+  // and downloading ~9MB on every page view would be pure waste, so the
+  // background download is skipped until a day has passed; conversions use
+  // the API meanwhile. A download cut short by leaving the page records
+  // nothing, so the next page view simply tries again.
+  var DOWNLOADED_KEY = 'aksharamukhaEngineDownloaded'
+  var DOWNLOAD_RETRY_MS = 24 * 60 * 60 * 1000
+  function downloadedRecently () {
+    return Date.now() - Number(Storage.get(DOWNLOADED_KEY) || 0) < DOWNLOAD_RETRY_MS
   }
 
   // Once this page has the current engine's files, deletes saved copies
@@ -722,7 +744,7 @@ var Engine = (function () {
     if (Config.engine === 'wasm') { start(); return }
     if (readyPromise || failed || !window.caches) return
     engineFilesCached().then(function (cached) {
-      if (!cached && !readyPromise) return downloadEngineFiles()
+      if (!cached && !readyPromise && !downloadedRecently()) return downloadEngineFiles()
     }).catch(function (e) {
       console.warn('Aksharamukha: could not download the conversion engine in the background (conversions will use the API).', e)
     })
@@ -1030,6 +1052,7 @@ var Panel = (function () {
 
   function injectStyles () {
     var style = document.createElement('style')
+    if (Config.nonce) style.nonce = Config.nonce
     style.textContent = PANEL_CSS
     document.head.appendChild(style)
     var link = document.createElement('link')
@@ -1194,7 +1217,10 @@ var Panel = (function () {
     // mousedown (not click) fires before the search input's blur, so the
     // option gets selected before the listbox would otherwise close itself.
     els.listbox.addEventListener('mousedown', onListboxMouseDown)
-    document.addEventListener('click', function (event) {
+    // pointerdown, not click: Safari on iPhone doesn't send a click for a
+    // tap on something that isn't itself clickable (plain page text, empty
+    // space), so tapping elsewhere never closed the list or an example.
+    document.addEventListener('pointerdown', function (event) {
       if (root.contains(event.target)) return
       closeListbox()
       closeExamples()

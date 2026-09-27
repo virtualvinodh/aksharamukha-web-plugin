@@ -12,6 +12,13 @@ const DEMO = '/demo-v5-api.html'
 // How many engine files the build lists (everything in wasm/pyodide and wasm/wheel).
 const ENGINE_FILE_COUNT = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '..', 'aksharamukha-v5.js'), 'utf8').match(/^var ENGINE_FILES = (.*)$/m)[1]).length
 
+// Playwright's WebKit build for Windows can't keep Cache Storage from one page
+// load to the next (its writes to disk fail), unlike Safari itself - so tests
+// that rely on engine files saved by an earlier page load are skipped there.
+// They still run in WebKit on Linux (CI) and in the other browsers.
+const cacheStorageNotKept = browserName => browserName === 'webkit' && process.platform === 'win32'
+const SKIP_REASON = "Playwright's WebKit for Windows doesn't keep Cache Storage between page loads"
+
 test('fresh visit opens the panel; converts on selection', async ({ page }) => {
   await page.goto(DEMO)
   await expect(page.locator('#aksharamukha-navbar')).toBeVisible()
@@ -227,7 +234,62 @@ test('faint text meets the recommended contrast on the default white panel', asy
   await expect(page.locator('#aksharamukha-branding')).toHaveCSS('color', 'rgb(107, 112, 128)')
 })
 
-test('older copies of the engine saved under another address are deleted once the current one is saved', async ({ page }) => {
+test('a browser that doesn\'t keep the saved engine files isn\'t made to download them on every page view', async ({ page, browserName }) => {
+  test.skip(cacheStorageNotKept(browserName), SKIP_REASON)
+  // e.g. writes failing, storage full, or storage that doesn't last between
+  // page views: without a guard the ~9MB download repeated every page view.
+  let engineRequests = 0
+  page.on('request', r => { if (r.url().includes('/wasm/')) engineRequests++ })
+  const saved = () => page.evaluate(async () => (await (await caches.open('aksharamukha-wasm-v1')).keys()).length)
+  await page.goto('/demo-v5.html')
+  await expect.poll(saved, { timeout: 60000 }).toBe(ENGINE_FILE_COUNT)
+  await page.evaluate(() => caches.delete('aksharamukha-wasm-v1')) // the browser drops them
+
+  engineRequests = 0
+  await page.reload()
+  await page.waitForTimeout(3000)
+  expect(engineRequests).toBe(0)
+  const apiCall = page.waitForRequest(r => r.url().includes('appspot.com'))
+  await selectScript(page, 'Tamil') // conversions still work, via the API
+  await apiCall
+  await expect(page.locator('.aksharamukha-text').first()).toContainText(/[஀-௿]/, { timeout: 30000 })
+})
+
+test('on a site whose Content-Security-Policy blocks the engine, conversions quietly use the API', async ({ page, browserName }) => {
+  test.skip(cacheStorageNotKept(browserName), SKIP_REASON)
+  // The engine runs in a worker made from a blob: address, which a strict
+  // policy can forbid. Save the engine files first, so the plugin chooses
+  // the engine, then load a page whose policy doesn't allow the worker.
+  await page.goto('/demo-v5.html')
+  await expect.poll(() => page.evaluate(async () => (await (await caches.open('aksharamukha-wasm-v1')).keys()).length), { timeout: 60000 }).toBe(ENGINE_FILE_COUNT)
+  await page.setContent(`
+    <!DOCTYPE html><html><head><meta charset="utf-8"/>
+    <meta http-equiv="Content-Security-Policy" content="worker-src 'none'">
+    </head><body><p class="aksharamukha-text">नमस्ते</p>
+    <script src="/aksharamukha-v5.js"></script></body></html>
+  `, { waitUntil: 'load' })
+  const warnings = []
+  page.on('console', m => { if (m.type() === 'warning') warnings.push(m.text()) })
+  const apiCall = page.waitForRequest(r => r.url().includes('appspot.com'))
+  await selectScript(page, 'Tamil')
+  await apiCall
+  expect(warnings.join(' ')).toMatch(/Aksharamukha: .*(engine failed|failed to start)/) // the engine was tried
+  await expect(page.locator('.aksharamukha-text')).toContainText(/[஀-௿]/, { timeout: 30000 })
+})
+
+test('on a site that allows styles only by nonce, the panel is still styled', async ({ page }) => {
+  await page.goto(DEMO)
+  await page.setContent(`
+    <!DOCTYPE html><html><head><meta charset="utf-8"/>
+    <meta http-equiv="Content-Security-Policy" content="script-src 'nonce-t3st'; style-src 'nonce-t3st'">
+    </head><body><p class="aksharamukha-text">नमस्ते</p>
+    <script nonce="t3st" src="/aksharamukha-v5.js?engine=api"></script></body></html>
+  `, { waitUntil: 'load' })
+  await expect(page.locator('#aksharamukha-navbar')).toHaveCSS('position', 'fixed')
+})
+
+test('older copies of the engine saved under another address are deleted once the current one is saved', async ({ page, browserName }) => {
+  test.skip(cacheStorageNotKept(browserName), SKIP_REASON)
   // Older plugin versions saved the ~20MB engine under their own folder;
   // those copies were never cleaned up.
   const stale = 'https://cdn.jsdelivr.net/gh/virtualvinodh/aksharamukha-web-plugin@v5.0.8/wasm/pyodide/pyodide.asm.wasm'
@@ -715,7 +777,8 @@ test('output font class beats a lang-keyed host rule and a <pre> UA default', as
   await expect(page.locator('h2')).toHaveAttribute('lang', 'sa')
 })
 
-test('a first visit downloads the engine files without starting the engine; later page views do nothing in the background', async ({ page }) => {
+test('a first visit downloads the engine files without starting the engine; later page views do nothing in the background', async ({ page, browserName }) => {
+  test.skip(cacheStorageNotKept(browserName), SKIP_REASON)
   // Starting the engine costs seconds of processing and ~90MB of memory,
   // so readers who never convert shouldn't pay it on every page view. The
   // files are still downloaded once, so later conversions don't need the
@@ -785,7 +848,8 @@ test.describe('engine start-up', () => {
     expect(await page.evaluate(() => typeof window.loadPyodide)).toBe('undefined')
   })
 
-  test('a returning visitor whose engine files are already cached converts without the API', async ({ page }) => {
+  test('a returning visitor whose engine files are already cached converts without the API', async ({ page, browserName }) => {
+    test.skip(cacheStorageNotKept(browserName), SKIP_REASON)
     // Also covers the first-visit path: the page converts via the API while
     // the engine downloads into Cache Storage in the background.
     const apiRequests = []
@@ -803,7 +867,8 @@ test.describe('engine start-up', () => {
     expect(apiRequests.length).toBe(0)
   })
 
-  test('clicking into the search box starts the engine, and a pick then converts without the API or re-downloading', async ({ page }) => {
+  test('clicking into the search box starts the engine, and a pick then converts without the API or re-downloading', async ({ page, browserName }) => {
+    test.skip(cacheStorageNotKept(browserName), SKIP_REASON)
     const apiRequests = []
     await page.route('https://aksharamukha-plugin.appspot.com/api/plugin', route => {
       apiRequests.push(route.request())
@@ -864,7 +929,16 @@ test.describe('engine start-up', () => {
         const worker = new RealWorker(url, options)
         const post = worker.postMessage.bind(worker)
         worker.postMessage = message => {
-          if (message && message.type === 'convert') window.__sentToEngine.push(message.target)
+          if (message && message.type === 'convert') {
+            window.__sentToEngine.push(message.target)
+            // Keeps this conversion "in progress" until the test says so,
+            // however quickly this browser's engine would finish it.
+            if (window.__holdNext) {
+              window.__holdNext = false
+              window.__release = () => post(message)
+              return
+            }
+          }
           return post(message)
         }
         return worker
@@ -883,13 +957,12 @@ test.describe('engine start-up', () => {
     await selectScript(page, 'Tamil')
     await expect(para).toContainText('நமஸ்தே', { timeout: 120000 })
 
-    await page.evaluate(() => { window.__sentToEngine = [] })
+    await page.evaluate(() => { window.__sentToEngine = []; window.__holdNext = true })
     for (const label of ['Telugu', 'Kannada', 'Bengali', 'Malayalam']) await selectScript(page, label)
+    await page.evaluate(() => window.__release())
     await expect(para).toContainText('നമസ്തേ', { timeout: 120000 })
     const sent = await page.evaluate(() => window.__sentToEngine)
-    expect(sent[sent.length - 1]).toBe('Malayalam')
-    expect(sent).not.toContain('Kannada')
-    expect(sent).not.toContain('Bengali')
+    expect(sent).toEqual(['Telugu', 'Malayalam'])
   })
 })
 

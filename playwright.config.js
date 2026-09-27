@@ -25,7 +25,12 @@ module.exports = defineConfig({
     url: 'http://127.0.0.1:4173/demo-v5-api.html',
     reuseExistingServer: !process.env.CI
   },
+  // Chrome, Firefox and Safari's engine (WebKit): the background worker,
+  // Cache Storage and WebAssembly are exactly the parts where they can
+  // differ.
   projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] } }
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
+    { name: 'webkit', use: { ...devices['Desktop Safari'] } }
   ]
 })

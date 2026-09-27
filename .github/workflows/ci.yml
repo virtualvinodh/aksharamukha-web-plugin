@@ -47,7 +47,7 @@ jobs:
           git diff --exit-code aksharamukha-v5.js || (echo "::error::aksharamukha-v5.js is out of date - run the build and commit it." && exit 1)
 
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install --with-deps chromium firefox webkit
 
       # Tests hit the live hosted API (aksharamukha-plugin.appspot.com) as
       # part of engine=api - these are integration tests, not isolated
